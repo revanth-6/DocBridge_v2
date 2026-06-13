@@ -1,0 +1,506 @@
+[
+  {
+    "Service": "Consultation",
+    "Operation": "CREATE",
+    "Expected": 201,
+    "Actual": 201,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Consultation",
+    "Operation": "READ ALL",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Consultation",
+    "Operation": "READ SINGLE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Consultation",
+    "Operation": "UPDATE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Consultation",
+    "Operation": "DELETE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Consultation",
+    "Operation": "READ DELETED",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Consultation",
+    "Operation": "DOUBLE DELETE",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Consultation",
+    "Operation": "UPDATE DELETED",
+    "Expected": "404/400",
+    "Actual": 404,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Consultation",
+    "Operation": "RAPID CREATION",
+    "Expected": "Handled gracefully",
+    "Actual": 201,
+    "Result": "❌ Fail",
+    "Message": "Created 3 records. Handling was graceful."
+  },
+  {
+    "Service": "Prescription",
+    "Operation": "CREATE",
+    "Expected": 201,
+    "Actual": 201,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Prescription",
+    "Operation": "READ ALL",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Prescription",
+    "Operation": "READ SINGLE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Prescription",
+    "Operation": "UPDATE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Prescription",
+    "Operation": "DELETE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Prescription",
+    "Operation": "READ DELETED",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Prescription",
+    "Operation": "DOUBLE DELETE",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Prescription",
+    "Operation": "UPDATE DELETED",
+    "Expected": "404/400",
+    "Actual": 404,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Prescription",
+    "Operation": "RAPID CREATION",
+    "Expected": "Handled gracefully",
+    "Actual": 201,
+    "Result": "❌ Fail",
+    "Message": "Created 3 records. Handling was graceful."
+  },
+  {
+    "Service": "Reminders - Medicine",
+    "Operation": "CREATE",
+    "Expected": 201,
+    "Actual": 201,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Medicine",
+    "Operation": "READ ALL",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Medicine",
+    "Operation": "READ SINGLE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Medicine",
+    "Operation": "UPDATE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Medicine",
+    "Operation": "DELETE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Medicine",
+    "Operation": "READ DELETED",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Medicine",
+    "Operation": "DOUBLE DELETE",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Medicine",
+    "Operation": "UPDATE DELETED",
+    "Expected": "404/400",
+    "Actual": 404,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Medicine",
+    "Operation": "RAPID CREATION",
+    "Expected": "Handled gracefully",
+    "Actual": 201,
+    "Result": "❌ Fail",
+    "Message": "Created 3 records. Handling was graceful."
+  },
+  {
+    "Service": "Reminders - Follow-up",
+    "Operation": "CREATE",
+    "Expected": 201,
+    "Actual": 201,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Follow-up",
+    "Operation": "READ ALL",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Follow-up",
+    "Operation": "READ SINGLE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Follow-up",
+    "Operation": "UPDATE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Follow-up",
+    "Operation": "DELETE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Follow-up",
+    "Operation": "READ DELETED",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Follow-up",
+    "Operation": "DOUBLE DELETE",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Follow-up",
+    "Operation": "UPDATE DELETED",
+    "Expected": "404/400",
+    "Actual": 404,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Reminders - Follow-up",
+    "Operation": "RAPID CREATION",
+    "Expected": "Handled gracefully",
+    "Actual": 201,
+    "Result": "❌ Fail",
+    "Message": "Created 3 records. Handling was graceful."
+  },
+  {
+    "Service": "Lab Reports",
+    "Operation": "CREATE",
+    "Expected": 201,
+    "Actual": 201,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Lab Reports",
+    "Operation": "READ ALL",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Lab Reports",
+    "Operation": "READ SINGLE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Lab Reports",
+    "Operation": "UPDATE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Lab Reports",
+    "Operation": "DELETE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Lab Reports",
+    "Operation": "READ DELETED",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Lab Reports",
+    "Operation": "DOUBLE DELETE",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Lab Reports",
+    "Operation": "UPDATE DELETED",
+    "Expected": "404/400",
+    "Actual": 404,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Lab Reports",
+    "Operation": "RAPID CREATION",
+    "Expected": "Handled gracefully",
+    "Actual": 201,
+    "Result": "❌ Fail",
+    "Message": "Created 3 records. Handling was graceful."
+  },
+  {
+    "Service": "Symptoms",
+    "Operation": "CREATE",
+    "Expected": 201,
+    "Actual": 201,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Symptoms",
+    "Operation": "READ ALL",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Symptoms",
+    "Operation": "READ SINGLE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Symptoms",
+    "Operation": "UPDATE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Symptoms",
+    "Operation": "DELETE",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Symptoms",
+    "Operation": "READ DELETED",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Symptoms",
+    "Operation": "DOUBLE DELETE",
+    "Expected": 404,
+    "Actual": 404,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Symptoms",
+    "Operation": "UPDATE DELETED",
+    "Expected": "404/400",
+    "Actual": 404,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Symptoms",
+    "Operation": "RAPID CREATION",
+    "Expected": "Handled gracefully",
+    "Actual": 201,
+    "Result": "❌ Fail",
+    "Message": "Created 3 records. Handling was graceful."
+  },
+  {
+    "Service": "Family Members",
+    "Operation": "CREATE",
+    "Expected": 201,
+    "Actual": 201,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Family Members",
+    "Operation": "READ ALL",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Service": "Family Members",
+    "Operation": "READ SINGLE",
+    "Expected": 200,
+    "Actual": 429,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Family Members",
+    "Operation": "UPDATE",
+    "Expected": 200,
+    "Actual": 429,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Family Members",
+    "Operation": "DELETE",
+    "Expected": 200,
+    "Actual": 429,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Family Members",
+    "Operation": "READ DELETED",
+    "Expected": 404,
+    "Actual": 429,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Family Members",
+    "Operation": "DOUBLE DELETE",
+    "Expected": 404,
+    "Actual": 429,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Service": "Family Members",
+    "Operation": "UPDATE DELETED",
+    "Expected": "404/400",
+    "Actual": 429,
+    "Result": "❌ Fail",
+    "Message": "Expected 404 or 400"
+  },
+  {
+    "Service": "Family Members",
+    "Operation": "RAPID CREATION",
+    "Expected": "Handled gracefully",
+    "Actual": "Mixed",
+    "Result": "❌ Fail",
+    "Message": "Created 0 records. Handling was graceful."
+  }
+]

@@ -1,0 +1,177 @@
+version: '3.8'
+
+services:
+  docbridge-postgres:
+    image: postgres:15-alpine
+    container_name: docbridge-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  docbridge-gateway:
+    image: docbridge.azurecr.io/gateway:latest
+    container_name: docbridge-gateway
+    restart: always
+    ports:
+      - "80:3000"
+      - "443:3000"
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  docbridge-auth:
+    image: docbridge.azurecr.io/auth-service:latest
+    container_name: docbridge-auth
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=docbridge-postgres
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+      - JWT_SECRET=${JWT_SECRET}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  docbridge-consultation:
+    image: docbridge.azurecr.io/consultation-service:latest
+    container_name: docbridge-consultation
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=docbridge-postgres
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  docbridge-family:
+    image: docbridge.azurecr.io/family-service:latest
+    container_name: docbridge-family
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=docbridge-postgres
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  docbridge-health-summary:
+    image: docbridge.azurecr.io/health-summary-service:latest
+    container_name: docbridge-health-summary
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - INTERNAL_API_URL=http://docbridge-gateway:3000
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  docbridge-labreport:
+    image: docbridge.azurecr.io/labreport-service:latest
+    container_name: docbridge-labreport
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=docbridge-postgres
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  docbridge-prescription:
+    image: docbridge.azurecr.io/prescription-service:latest
+    container_name: docbridge-prescription
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=docbridge-postgres
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  docbridge-reminder:
+    image: docbridge.azurecr.io/reminder-service:latest
+    container_name: docbridge-reminder
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=docbridge-postgres
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  docbridge-symptom:
+    image: docbridge.azurecr.io/symptom-service:latest
+    container_name: docbridge-symptom
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=docbridge-postgres
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  docbridge-ai-companion:
+    image: docbridge.azurecr.io/ai-companion-service:latest
+    container_name: docbridge-ai-companion
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+volumes:
+  pgdata:

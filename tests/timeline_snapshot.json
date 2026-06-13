@@ -1,0 +1,167 @@
+{
+  "success": true,
+  "message": "Timeline retrieved.",
+  "data": [
+    {
+      "id": "c1000000-0000-0000-0000-000000000003",
+      "type": "consultation",
+      "event_date": "2026-06-04",
+      "title": "Dr. Sneha Kapoor",
+      "description": null,
+      "status": "scheduled"
+    },
+    {
+      "id": "39030ef4-61eb-4d12-909d-76b26eb33c09",
+      "type": "symptom",
+      "event_date": "2026-06-01",
+      "title": "Headache Test",
+      "description": null,
+      "status": "ongoing"
+    },
+    {
+      "id": "4058fd03-9f7a-4f86-b1fa-010cd697c5b4",
+      "type": "symptom",
+      "event_date": "2026-06-01",
+      "title": "Idempotent Test",
+      "description": null,
+      "status": "ongoing"
+    },
+    {
+      "id": "bfd86ff7-5798-4a1b-b07a-5b49d3d1df29",
+      "type": "consultation",
+      "event_date": "2026-06-01",
+      "title": null,
+      "description": null,
+      "status": "completed"
+    },
+    {
+      "id": "8ca4d534-465e-4e72-8415-02d22b02acc7",
+      "type": "consultation",
+      "event_date": "2026-06-01",
+      "title": null,
+      "description": null,
+      "status": "completed"
+    },
+    {
+      "id": "48dbb740-9dbd-47c7-bb55-0110b85a9082",
+      "type": "consultation",
+      "event_date": "2026-06-01",
+      "title": null,
+      "description": null,
+      "status": "completed"
+    },
+    {
+      "id": "ed3b6b2b-e22d-4b9e-b3fc-38f1290233df",
+      "type": "consultation",
+      "event_date": "2026-06-01",
+      "title": null,
+      "description": null,
+      "status": "completed"
+    },
+    {
+      "id": "e3000000-0000-0000-0000-000000000004",
+      "type": "symptom",
+      "event_date": "2026-05-23",
+      "title": "Lower back pain",
+      "description": "Likely from bad posture at work. No radiating pain to legs.",
+      "status": "ongoing"
+    },
+    {
+      "id": "e3000000-0000-0000-0000-000000000003",
+      "type": "symptom",
+      "event_date": "2026-05-18",
+      "title": "Mild dizziness",
+      "description": "Happens mostly in the morning. Goes away after a few seconds.",
+      "status": "ongoing"
+    },
+    {
+      "id": "c1000000-0000-0000-0000-000000000004",
+      "type": "consultation",
+      "event_date": "2026-05-14",
+      "title": "Dr. Vikram Patel",
+      "description": "Your father's diabetes is mostly under control but the sugar levels have been slightly high over the past few months. The tingling in his feet is an early sign that high sugar is starting to affect the nerves — catching it early is really good news because it can be managed.",
+      "status": "completed"
+    },
+    {
+      "id": "e3000000-0000-0000-0000-000000000002",
+      "type": "symptom",
+      "event_date": "2026-05-07",
+      "title": "Ankle swelling",
+      "description": "Started about a week after beginning Amlodipine. Doctor said this is a common side effect.",
+      "status": "ongoing"
+    },
+    {
+      "id": "e2000000-0000-0000-0000-000000000002",
+      "type": "lab_report",
+      "event_date": "2026-04-28",
+      "title": "Lipid Profile",
+      "description": "Your cholesterol results show that some of your fat levels in the blood are higher than ideal. Think of it like too much grease in a pipe — over time it can narrow the pipes. The good news: this is very common and can usually be improved with diet changes, exercise, and sometimes medicine.",
+      "status": "final"
+    },
+    {
+      "id": "c1000000-0000-0000-0000-000000000002",
+      "type": "consultation",
+      "event_date": "2026-04-28",
+      "title": "Dr. Sneha Kapoor",
+      "description": "Your blood pressure is getting better with the medicine! The mild dizziness when you stand up quickly is a common, harmless side effect that usually goes away.",
+      "status": "completed"
+    },
+    {
+      "id": "e3000000-0000-0000-0000-000000000001",
+      "type": "symptom",
+      "event_date": "2026-04-23",
+      "title": "Headache",
+      "description": "Was happening almost daily before starting blood pressure medicine. Much better now.",
+      "status": "resolved"
+    },
+    {
+      "id": "e2000000-0000-0000-0000-000000000001",
+      "type": "lab_report",
+      "event_date": "2026-04-16",
+      "title": "Complete Blood Count (CBC)",
+      "description": "Great news! Your blood test results are all perfectly normal. Your red blood cells, white blood cells, and platelets are all in the healthy range. This means your blood is carrying oxygen well, your immune system looks good, and your blood clotting ability is normal.",
+      "status": "final"
+    },
+    {
+      "id": "e1000000-0000-0000-0000-000000000001",
+      "type": "prescription",
+      "event_date": "2026-03-29",
+      "title": "Amlodipine",
+      "description": "This medicine helps relax your blood vessels so blood flows more easily, which lowers your blood pressure. Think of it like widening a garden hose so water flows through with less pressure.",
+      "status": "active"
+    },
+    {
+      "id": "e1000000-0000-0000-0000-000000000002",
+      "type": "prescription",
+      "event_date": "2026-03-29",
+      "title": "Ecosprin",
+      "description": "This is a very small dose of aspirin that helps keep your blood flowing smoothly. It makes your blood slightly less \"sticky\" so it does not form clots that could block blood vessels.",
+      "status": "active"
+    },
+    {
+      "id": "e1000000-0000-0000-0000-000000000003",
+      "type": "prescription",
+      "event_date": "2026-03-29",
+      "title": "Pan 40",
+      "description": "This medicine reduces the acid in your stomach. Since you are taking aspirin, which can irritate the stomach, this acts as a shield to protect your stomach lining.",
+      "status": "completed"
+    },
+    {
+      "id": "c1000000-0000-0000-0000-000000000001",
+      "type": "consultation",
+      "event_date": "2026-03-29",
+      "title": "Dr. Sneha Kapoor",
+      "description": "Your blood pressure is slightly higher than normal. This is called mild high blood pressure. It means your heart is working a little harder than it should to pump blood.",
+      "status": "completed"
+    }
+  ],
+  "pagination": {
+    "total": 0,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 0,
+    "hasNext": false,
+    "hasPrev": false
+  },
+  "timestamp": "2026-05-28T18:11:40.489Z"
+}

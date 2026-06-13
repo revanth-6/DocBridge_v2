@@ -1,0 +1,598 @@
+# --- GATEWAY SERVICE ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-deployment
+  labels:
+    app: docbridge-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docbridge-gateway
+  template:
+    metadata:
+      labels:
+        app: docbridge-gateway
+    spec:
+      containers:
+      - name: gateway
+        image: docbridge.azurecr.io/gateway:latest
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - secretRef:
+            name: docbridge-secrets
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: docbridge-gateway
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+
+# --- AUTH SERVICE ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-deployment
+  labels:
+    app: docbridge-auth
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docbridge-auth
+  template:
+    metadata:
+      labels:
+        app: docbridge-auth
+    spec:
+      containers:
+      - name: auth
+        image: docbridge.azurecr.io/auth-service:latest
+        ports:
+        - containerPort: 3001
+        envFrom:
+        - secretRef:
+            name: docbridge-secrets
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/auth/health
+            port: 3001
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/auth/health
+            port: 3001
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+spec:
+  type: ClusterIP
+  selector:
+    app: docbridge-auth
+  ports:
+    - protocol: TCP
+      port: 3001
+      targetPort: 3001
+
+# --- CONSULTATION SERVICE ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consultation-deployment
+  labels:
+    app: docbridge-consultation
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docbridge-consultation
+  template:
+    metadata:
+      labels:
+        app: docbridge-consultation
+    spec:
+      containers:
+      - name: consultation
+        image: docbridge.azurecr.io/consultation-service:latest
+        ports:
+        - containerPort: 3002
+        envFrom:
+        - secretRef:
+            name: docbridge-secrets
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/consultations/health
+            port: 3002
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/consultations/health
+            port: 3002
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consultation-service
+spec:
+  type: ClusterIP
+  selector:
+    app: docbridge-consultation
+  ports:
+    - protocol: TCP
+      port: 3002
+      targetPort: 3002
+
+# --- PRESCRIPTION SERVICE ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prescription-deployment
+  labels:
+    app: docbridge-prescription
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docbridge-prescription
+  template:
+    metadata:
+      labels:
+        app: docbridge-prescription
+    spec:
+      containers:
+      - name: prescription
+        image: docbridge.azurecr.io/prescription-service:latest
+        ports:
+        - containerPort: 3003
+        envFrom:
+        - secretRef:
+            name: docbridge-secrets
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/prescriptions/health
+            port: 3003
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/prescriptions/health
+            port: 3003
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prescription-service
+spec:
+  type: ClusterIP
+  selector:
+    app: docbridge-prescription
+  ports:
+    - protocol: TCP
+      port: 3003
+      targetPort: 3003
+
+# --- REMINDER SERVICE ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reminder-deployment
+  labels:
+    app: docbridge-reminder
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docbridge-reminder
+  template:
+    metadata:
+      labels:
+        app: docbridge-reminder
+    spec:
+      containers:
+      - name: reminder
+        image: docbridge.azurecr.io/reminder-service:latest
+        ports:
+        - containerPort: 3004
+        envFrom:
+        - secretRef:
+            name: docbridge-secrets
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/reminders/health
+            port: 3004
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/reminders/health
+            port: 3004
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reminder-service
+spec:
+  type: ClusterIP
+  selector:
+    app: docbridge-reminder
+  ports:
+    - protocol: TCP
+      port: 3004
+      targetPort: 3004
+
+# --- LAB REPORT SERVICE ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: labreport-deployment
+  labels:
+    app: docbridge-labreport
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docbridge-labreport
+  template:
+    metadata:
+      labels:
+        app: docbridge-labreport
+    spec:
+      containers:
+      - name: labreport
+        image: docbridge.azurecr.io/labreport-service:latest
+        ports:
+        - containerPort: 3005
+        envFrom:
+        - secretRef:
+            name: docbridge-secrets
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/lab-reports/health
+            port: 3005
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/lab-reports/health
+            port: 3005
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: labreport-service
+spec:
+  type: ClusterIP
+  selector:
+    app: docbridge-labreport
+  ports:
+    - protocol: TCP
+      port: 3005
+      targetPort: 3005
+
+# --- SYMPTOM SERVICE ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: symptom-deployment
+  labels:
+    app: docbridge-symptom
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docbridge-symptom
+  template:
+    metadata:
+      labels:
+        app: docbridge-symptom
+    spec:
+      containers:
+      - name: symptom
+        image: docbridge.azurecr.io/symptom-service:latest
+        ports:
+        - containerPort: 3006
+        envFrom:
+        - secretRef:
+            name: docbridge-secrets
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/symptoms/health
+            port: 3006
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/symptoms/health
+            port: 3006
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: symptom-service
+spec:
+  type: ClusterIP
+  selector:
+    app: docbridge-symptom
+  ports:
+    - protocol: TCP
+      port: 3006
+      targetPort: 3006
+
+# --- AI COMPANION SERVICE ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-companion-deployment
+  labels:
+    app: docbridge-ai-companion
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docbridge-ai-companion
+  template:
+    metadata:
+      labels:
+        app: docbridge-ai-companion
+    spec:
+      containers:
+      - name: ai-companion
+        image: docbridge.azurecr.io/ai-companion-service:latest
+        ports:
+        - containerPort: 3007
+        envFrom:
+        - secretRef:
+            name: docbridge-secrets
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/ai-companion/health
+            port: 3007
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/ai-companion/health
+            port: 3007
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-companion-service
+spec:
+  type: ClusterIP
+  selector:
+    app: docbridge-ai-companion
+  ports:
+    - protocol: TCP
+      port: 3007
+      targetPort: 3007
+
+# --- HEALTH SUMMARY SERVICE ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-summary-deployment
+  labels:
+    app: docbridge-health-summary
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docbridge-health-summary
+  template:
+    metadata:
+      labels:
+        app: docbridge-health-summary
+    spec:
+      containers:
+      - name: health-summary
+        image: docbridge.azurecr.io/health-summary-service:latest
+        ports:
+        - containerPort: 3008
+        envFrom:
+        - secretRef:
+            name: docbridge-secrets
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health-summary/health
+            port: 3008
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health-summary/health
+            port: 3008
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: health-summary-service
+spec:
+  type: ClusterIP
+  selector:
+    app: docbridge-health-summary
+  ports:
+    - protocol: TCP
+      port: 3008
+      targetPort: 3008
+
+# --- FAMILY SERVICE ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: family-deployment
+  labels:
+    app: docbridge-family
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docbridge-family
+  template:
+    metadata:
+      labels:
+        app: docbridge-family
+    spec:
+      containers:
+      - name: family
+        image: docbridge.azurecr.io/family-service:latest
+        ports:
+        - containerPort: 3009
+        envFrom:
+        - secretRef:
+            name: docbridge-secrets
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/family/health
+            port: 3009
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/family/health
+            port: 3009
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: family-service
+spec:
+  type: ClusterIP
+  selector:
+    app: docbridge-family
+  ports:
+    - protocol: TCP
+      port: 3009
+      targetPort: 3009

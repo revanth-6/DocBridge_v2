@@ -1,0 +1,82 @@
+[
+  {
+    "Phase": "Cross-Service",
+    "Operation": "Create Linked Prescription",
+    "Expected": 201,
+    "Actual": 201,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Phase": "Cross-Service",
+    "Operation": "Delete Parent Consultation",
+    "Expected": 200,
+    "Actual": 200,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Phase": "Cross-Service",
+    "Operation": "Read Orphaned Prescription",
+    "Expected": "Handles gracefully",
+    "Actual": 200,
+    "Result": "❌ Fail",
+    "Message": "Record exists (no cascade delete)"
+  },
+  {
+    "Phase": "Adversarial",
+    "Operation": "SQL Injection (POST)",
+    "Expected": "Handled (201 or 400)",
+    "Actual": 201,
+    "Result": "❌ Fail",
+    "Message": "Did not crash"
+  },
+  {
+    "Phase": "Adversarial",
+    "Operation": "XSS Payload (POST)",
+    "Expected": "Handled (201 or 400)",
+    "Actual": 201,
+    "Result": "❌ Fail",
+    "Message": "Stored safely or rejected"
+  },
+  {
+    "Phase": "Adversarial",
+    "Operation": "Invalid JWT Signature",
+    "Expected": 401,
+    "Actual": 401,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Phase": "Adversarial",
+    "Operation": "Missing Auth Header",
+    "Expected": 401,
+    "Actual": 401,
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Phase": "Adversarial",
+    "Operation": "Oversized Payload (5MB)",
+    "Expected": 413,
+    "Actual": 201,
+    "Result": "❌ Fail",
+    "Message": ""
+  },
+  {
+    "Phase": "Adversarial",
+    "Operation": "Role Escalation",
+    "Expected": "Prevented",
+    "Actual": "Prevented",
+    "Result": "✅ Pass",
+    "Message": ""
+  },
+  {
+    "Phase": "Adversarial",
+    "Operation": "Type Injection (Array for String)",
+    "Expected": "4XX",
+    "Actual": 422,
+    "Result": "✅ Pass",
+    "Message": ""
+  }
+]

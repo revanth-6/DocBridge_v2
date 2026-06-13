@@ -1,0 +1,309 @@
+name: "DocBridge Deploy to AKS"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "services/**"
+      - "frontend/**"
+      - "gateway/**"
+      - "kubernetes/**"
+      - "database/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: true
+  TF_VERSION: "1.5.7"
+
+jobs:
+  deploy:
+    name: "Build, Push and Deploy"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Azure Login (OIDC)"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.ARM_CLIENT_ID }}
+          tenant-id: ${{ env.ARM_TENANT_ID }}
+          subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
+
+      - name: "Setup Terraform (needed for outputs)"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: "Fetch Terraform Outputs"
+        id: tf_outputs
+        run: |
+          cd terraform
+          terraform init \
+            -backend-config="resource_group_name=docbridge-rg" \
+            -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT_NAME }}" \
+            -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
+            -backend-config="key=dev.terraform.tfstate"
+          
+          echo "ACR_SERVER=$(terraform output -raw acr_login_server)" >> $GITHUB_ENV
+          echo "ACR_NAME=$(terraform output -raw acr_name)" >> $GITHUB_ENV
+          echo "KV_NAME=$(terraform output -raw key_vault_name)" >> $GITHUB_ENV
+          echo "IDENTITY_CLIENT_ID=$(terraform output -raw workload_identity_client_id)" >> $GITHUB_ENV
+          echo "POSTGRES_FQDN=$(terraform output -raw postgres_fqdn)" >> $GITHUB_ENV
+          echo "AGW_IP=$(terraform output -raw app_gateway_public_ip)" >> $GITHUB_ENV
+
+      - name: "ACR Login"
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: "Determine Changed Services"
+        id: changes
+        run: |
+          # Fallback if before commit is empty or all zeros
+          DIFF_BASE=${{ github.event.before }}
+          if [ "$DIFF_BASE" = "0000000000000000000000000000000000000000" ] || [ -z "$DIFF_BASE" ]; then
+            DIFF_BASE="HEAD~1"
+          fi
+          
+          echo "Checking differences against $DIFF_BASE"
+          CHANGES=$(git diff --name-only $DIFF_BASE HEAD || true)
+          echo "Changed files:"
+          echo "$CHANGES"
+          
+          # Initialize variables
+          BUILD_GATEWAY=false
+          BUILD_FRONTEND=false
+          BUILD_AUTH=false
+          BUILD_CONSULTATION=false
+          BUILD_PRESCRIPTION=false
+          BUILD_REMINDER=false
+          BUILD_LABREPORT=false
+          BUILD_SYMPTOM=false
+          BUILD_AI=false
+          BUILD_SUMMARY=false
+          BUILD_FAMILY=false
+          
+          if echo "$CHANGES" | grep -q "^gateway/"; then BUILD_GATEWAY=true; fi
+          if echo "$CHANGES" | grep -q "^frontend/"; then BUILD_FRONTEND=true; fi
+          if echo "$CHANGES" | grep -q "^services/auth-service/"; then BUILD_AUTH=true; fi
+          if echo "$CHANGES" | grep -q "^services/consultation-service/"; then BUILD_CONSULTATION=true; fi
+          if echo "$CHANGES" | grep -q "^services/prescription-service/"; then BUILD_PRESCRIPTION=true; fi
+          if echo "$CHANGES" | grep -q "^services/reminder-service/"; then BUILD_REMINDER=true; fi
+          if echo "$CHANGES" | grep -q "^services/labreport-service/"; then BUILD_LABREPORT=true; fi
+          if echo "$CHANGES" | grep -q "^services/symptom-service/"; then BUILD_SYMPTOM=true; fi
+          if echo "$CHANGES" | grep -q "^services/ai-companion-service/"; then BUILD_AI=true; fi
+          if echo "$CHANGES" | grep -q "^services/health-summary-service/"; then BUILD_SUMMARY=true; fi
+          if echo "$CHANGES" | grep -q "^services/family-service/"; then BUILD_FAMILY=true; fi
+
+          # If first run or direct manifest changes, build everything
+          if echo "$CHANGES" | grep -q "^kubernetes/" || [ "$DIFF_BASE" = "HEAD~1" ]; then
+            BUILD_GATEWAY=true
+            BUILD_FRONTEND=true
+            BUILD_AUTH=true
+            BUILD_CONSULTATION=true
+            BUILD_PRESCRIPTION=true
+            BUILD_REMINDER=true
+            BUILD_LABREPORT=true
+            BUILD_SYMPTOM=true
+            BUILD_AI=true
+            BUILD_SUMMARY=true
+            BUILD_FAMILY=true
+          fi
+          
+          echo "gate_changed=$BUILD_GATEWAY" >> $GITHUB_ENV
+          echo "front_changed=$BUILD_FRONTEND" >> $GITHUB_ENV
+          echo "auth_changed=$BUILD_AUTH" >> $GITHUB_ENV
+          echo "consult_changed=$BUILD_CONSULTATION" >> $GITHUB_ENV
+          echo "presc_changed=$BUILD_PRESCRIPTION" >> $GITHUB_ENV
+          echo "remind_changed=$BUILD_REMINDER" >> $GITHUB_ENV
+          echo "lab_changed=$BUILD_LABREPORT" >> $GITHUB_ENV
+          echo "sym_changed=$BUILD_SYMPTOM" >> $GITHUB_ENV
+          echo "ai_changed=$BUILD_AI" >> $GITHUB_ENV
+          echo "summary_changed=$BUILD_SUMMARY" >> $GITHUB_ENV
+          echo "fam_changed=$BUILD_FAMILY" >> $GITHUB_ENV
+
+      - name: "Build and Push DB Migrations Image (Unconditional)"
+        run: |
+          docker build \
+            -t ${{ env.ACR_SERVER }}/db-migrations:${{ github.sha }} \
+            -t ${{ env.ACR_SERVER }}/db-migrations:latest \
+            ./database
+          docker push ${{ env.ACR_SERVER }}/db-migrations:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/db-migrations:latest
+
+      - name: "Build & Push API Gateway"
+        if: env.gate_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/api-gateway:${{ github.sha }} -t ${{ env.ACR_SERVER }}/api-gateway:latest ./gateway
+          docker push ${{ env.ACR_SERVER }}/api-gateway:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/api-gateway:latest
+
+      - name: "Build & Push Frontend"
+        if: env.front_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/frontend:${{ github.sha }} -t ${{ env.ACR_SERVER }}/frontend:latest ./frontend
+          docker push ${{ env.ACR_SERVER }}/frontend:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/frontend:latest
+
+      - name: "Build & Push Auth Service"
+        if: env.auth_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/auth-service:${{ github.sha }} -t ${{ env.ACR_SERVER }}/auth-service:latest ./services/auth-service
+          docker push ${{ env.ACR_SERVER }}/auth-service:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/auth-service:latest
+
+      - name: "Build & Push Consultation Service"
+        if: env.consult_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/consultation-service:${{ github.sha }} -t ${{ env.ACR_SERVER }}/consultation-service:latest ./services/consultation-service
+          docker push ${{ env.ACR_SERVER }}/consultation-service:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/consultation-service:latest
+
+      - name: "Build & Push Prescription Service"
+        if: env.presc_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/prescription-service:${{ github.sha }} -t ${{ env.ACR_SERVER }}/prescription-service:latest ./services/prescription-service
+          docker push ${{ env.ACR_SERVER }}/prescription-service:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/prescription-service:latest
+
+      - name: "Build & Push Reminder Service"
+        if: env.remind_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/reminder-service:${{ github.sha }} -t ${{ env.ACR_SERVER }}/reminder-service:latest ./services/reminder-service
+          docker push ${{ env.ACR_SERVER }}/reminder-service:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/reminder-service:latest
+
+      - name: "Build & Push Lab Report Service"
+        if: env.lab_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/labreport-service:${{ github.sha }} -t ${{ env.ACR_SERVER }}/labreport-service:latest ./services/labreport-service
+          docker push ${{ env.ACR_SERVER }}/labreport-service:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/labreport-service:latest
+
+      - name: "Build & Push Symptom Service"
+        if: env.sym_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/symptom-service:${{ github.sha }} -t ${{ env.ACR_SERVER }}/symptom-service:latest ./services/symptom-service
+          docker push ${{ env.ACR_SERVER }}/symptom-service:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/symptom-service:latest
+
+      - name: "Build & Push AI Companion Service"
+        if: env.ai_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/ai-companion-service:${{ github.sha }} -t ${{ env.ACR_SERVER }}/ai-companion-service:latest ./services/ai-companion-service
+          docker push ${{ env.ACR_SERVER }}/ai-companion-service:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/ai-companion-service:latest
+
+      - name: "Build & Push Health Summary Service"
+        if: env.summary_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/health-summary-service:${{ github.sha }} -t ${{ env.ACR_SERVER }}/health-summary-service:latest ./services/health-summary-service
+          docker push ${{ env.ACR_SERVER }}/health-summary-service:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/health-summary-service:latest
+
+      - name: "Build & Push Family Service"
+        if: env.fam_changed == 'true'
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/family-service:${{ github.sha }} -t ${{ env.ACR_SERVER }}/family-service:latest ./services/family-service
+          docker push ${{ env.ACR_SERVER }}/family-service:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/family-service:latest
+
+      - name: "Get AKS Credentials"
+        run: |
+          az aks get-credentials --resource-group docbridge-rg --name docbridge-dev-aks
+
+      - name: "Substitute Placeholders in Kubernetes Manifests"
+        run: |
+          # Service Account substitution
+          sed -i "s|WORKLOAD_IDENTITY_CLIENT_ID_PLACEHOLDER|${{ env.IDENTITY_CLIENT_ID }}|g" kubernetes/serviceaccount.yml
+          
+          # SecretProviderClass substitution
+          sed -i "s|KEY_VAULT_NAME_PLACEHOLDER|${{ env.KV_NAME }}|g" kubernetes/secretproviderclass.yml
+          sed -i "s|WORKLOAD_IDENTITY_CLIENT_ID_PLACEHOLDER|${{ env.IDENTITY_CLIENT_ID }}|g" kubernetes/secretproviderclass.yml
+          sed -i "s|AZURE_TENANT_ID_PLACEHOLDER|${{ env.ARM_TENANT_ID }}|g" kubernetes/secretproviderclass.yml
+          
+          # ConfigMap substitution
+          sed -i "s|POSTGRES_FQDN_PLACEHOLDER|${{ env.POSTGRES_FQDN }}|g" kubernetes/configmap.yml
+          sed -i "s|APP_GATEWAY_IP_PLACEHOLDER|${{ env.AGW_IP }}|g" kubernetes/configmap.yml
+          
+          # Deployment and Job Image substitution
+          find kubernetes/deployments/ -name "*.yml" -exec sed -i "s|ACR_LOGIN_SERVER_PLACEHOLDER|${{ env.ACR_SERVER }}|g" {} \;
+          find kubernetes/jobs/ -name "*.yml" -exec sed -i "s|ACR_LOGIN_SERVER_PLACEHOLDER|${{ env.ACR_SERVER }}|g" {} \;
+
+      - name: "Apply Shared Configs"
+        run: |
+          kubectl apply -f kubernetes/namespace.yml
+          kubectl apply -f kubernetes/serviceaccount.yml
+          kubectl apply -f kubernetes/secretproviderclass.yml
+          kubectl apply -f kubernetes/configmap.yml
+          kubectl apply -f kubernetes/services/
+          kubectl apply -f kubernetes/networkpolicies/
+
+      - name: "Run Database Migrations"
+        run: |
+          # Delete existing migration job if it exists (from previous run)
+          kubectl delete job db-migration -n docbridge --ignore-not-found=true
+          kubectl apply -f kubernetes/jobs/db-migration-job.yml
+          kubectl wait --for=condition=complete job/db-migration -n docbridge --timeout=300s
+
+      - name: "Run Database Seeders"
+        run: |
+          # Delete existing seeder job if it exists (from previous run)
+          kubectl delete job db-seeder -n docbridge --ignore-not-found=true
+          kubectl apply -f kubernetes/jobs/db-seeder-job.yml
+          kubectl wait --for=condition=complete job/db-seeder -n docbridge --timeout=120s
+
+      - name: "Apply Application Deployments"
+        run: |
+          kubectl apply -f kubernetes/services/redis-service.yml
+          kubectl apply -f kubernetes/deployments/redis-deployment.yml
+          kubectl rollout status deployment/redis -n docbridge --timeout=120s
+          kubectl apply -f kubernetes/deployments/
+          kubectl apply -f kubernetes/hpa/
+          kubectl apply -f kubernetes/ingress.yml
+
+      - name: "Update Changed Images and Check Rollout Status"
+        run: |
+          services=("api-gateway" "frontend" "auth-service" "consultation-service" "prescription-service" "reminder-service" "labreport-service" "symptom-service" "ai-companion-service" "health-summary-service" "family-service")
+          changed_flags=("${{ env.gate_changed }}" "${{ env.front_changed }}" "${{ env.auth_changed }}" "${{ env.consult_changed }}" "${{ env.presc_changed }}" "${{ env.remind_changed }}" "${{ env.lab_changed }}" "${{ env.sym_changed }}" "${{ env.ai_changed }}" "${{ env.summary_changed }}" "${{ env.fam_changed }}")
+          
+          for i in "${!services[@]}"; do
+            service_name="${services[$i]}"
+            is_changed="${changed_flags[$i]}"
+            
+            if [ "$is_changed" = "true" ]; then
+              echo "Updating image for deployment/$service_name to latest SHA: ${{ github.sha }}"
+              
+              # Set image to trigger rolling update with SHA tag
+              kubectl set image deployment/$service_name $service_name=${{ env.ACR_SERVER }}/$service_name:${{ github.sha }} -n docbridge
+              
+              # Validate deployment status (5m timeout)
+              if ! kubectl rollout status deployment/$service_name -n docbridge --timeout=5m; then
+                echo "Rollout failed for deployment/$service_name! Rolling back..."
+                kubectl rollout undo deployment/$service_name -n docbridge
+                exit 1
+              fi
+            fi
+          done
+
+      - name: "Verify Running Pods"
+        run: |
+          kubectl get pods -n docbridge
+          
+          # Check if any pods are in CrashLoopBackOff or Error state
+          BAD_PODS=$(kubectl get pods -n docbridge --no-headers | grep -E 'CrashLoopBackOff|Error' || true)
+          if [ ! -z "$BAD_PODS" ]; then
+            echo "Failed Pods detected:"
+            echo "$BAD_PODS"
+            exit 1
+          fi
+          echo "All deployments succeeded!"
