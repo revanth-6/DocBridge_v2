@@ -1,4 +1,5 @@
 {{- range $name, $config := .Values.services }}
+{{- if ne $name "db-migrations" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -96,4 +97,5 @@ spec:
             volumeAttributes:
               secretProviderClass: docbridge-secret-provider
 ---
+{{- end }}
 {{- end }}

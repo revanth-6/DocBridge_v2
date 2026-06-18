@@ -1,4 +1,5 @@
 {{- range $name, $config := .Values.services }}
+{{- if ne $name "db-migrations" }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -13,4 +14,5 @@ spec:
     app: {{ $name }}
   type: ClusterIP
 ---
+{{- end }}
 {{- end }}
