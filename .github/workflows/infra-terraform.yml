@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'terraform/**'
+      - '.github/workflows/infra-terraform.yml'
   pull_request:
     branches: [main]
     paths:
       - 'terraform/**'
+      - '.github/workflows/infra-terraform.yml'
   workflow_dispatch:
     inputs:
       action:
