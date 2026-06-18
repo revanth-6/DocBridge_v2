@@ -51,12 +51,18 @@ jobs:
       - name: Detect Changed Paths
         id: detect
         run: |
+          set +e
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             git fetch origin main --depth=1
             CHANGED=$(git diff --name-only origin/main HEAD)
           else
-            CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
+            if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+              CHANGED=$(git diff --name-only HEAD~1 HEAD)
+            else
+              CHANGED=$(git show --name-only --format="" HEAD)
+            fi
           fi
+          set -e
           
           echo "Changed files:"
           echo "$CHANGED"

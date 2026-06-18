@@ -15,15 +15,15 @@ on:
         type: string
     secrets:
       SONAR_TOKEN:
-        required: true
+        required: false
       SONAR_ORGANIZATION:
-        required: true
+        required: false
       SMTP_USERNAME:
-        required: true
+        required: false
       SMTP_PASSWORD:
-        required: true
+        required: false
       ALERT_EMAIL:
-        required: true
+        required: false
 
 jobs:
   sonarcloud-sast:
