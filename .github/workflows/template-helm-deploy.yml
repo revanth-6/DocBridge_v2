@@ -79,19 +79,38 @@ jobs:
 
       - name: Run Helm Upgrade/Install
         run: |
-          helm upgrade --install docbridge ./helm/docbridge \
-            --namespace docbridge \
-            --create-namespace \
-            --values helm/docbridge/values.yaml \
-            --values helm/docbridge/values.dev.yaml \
-            --set azure.keyVaultName=${{ inputs.kv_name }} \
-            --set azure.workloadIdentityClientId=${{ inputs.identity_id }} \
-            --set azure.tenantId=${{ secrets.AZURE_TENANT_ID }} \
-            --set database.host=${{ inputs.postgres_fqdn }} \
-            --set gateway.corsOrigin=http://${{ inputs.agw_ip }} \
-            --set image.tag=${{ inputs.image_tag }} \
-            --wait \
-            --timeout 8m
+          MAX_RETRIES=20
+          RETRY_DELAY=20
+          success=false
+          
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i of $MAX_RETRIES to run Helm upgrade..."
+            if helm upgrade --install docbridge ./helm/docbridge \
+              --namespace docbridge \
+              --create-namespace \
+              --values helm/docbridge/values.yaml \
+              --values helm/docbridge/values.dev.yaml \
+              --set azure.keyVaultName=${{ inputs.kv_name }} \
+              --set azure.workloadIdentityClientId=${{ inputs.identity_id }} \
+              --set azure.tenantId=${{ secrets.AZURE_TENANT_ID }} \
+              --set database.host=${{ inputs.postgres_fqdn }} \
+              --set gateway.corsOrigin=http://${{ inputs.agw_ip }} \
+              --set services.${{ inputs.helm_service_key }}.image.tag=${{ inputs.image_tag }} \
+              --wait \
+              --timeout 8m; then
+              success=true
+              echo "Helm upgrade completed successfully!"
+              break
+            else
+              echo "Helm upgrade attempt $i failed (possibly due to concurrent lock). Waiting $RETRY_DELAY seconds before retrying..."
+              sleep $RETRY_DELAY
+            fi
+          done
+          
+          if [ "$success" = false ]; then
+            echo "Helm upgrade failed after $MAX_RETRIES attempts due to locking conflicts or configuration issues."
+            exit 1
+          fi
 
       - name: Verify Deployment Health
         run: |

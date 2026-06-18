@@ -12,13 +12,12 @@ Create chart name and version as used by the chart label.
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{/*
-Construct the image URL for a microservice.
-Expects a dict with 'name' and 'context'.
-Usage: {{ include "docbridge.image" (dict "name" "auth-service" "context" .) }}
-*/}}
 {{- define "docbridge.image" -}}
 {{- $registry := .context.Values.global.imageRegistry -}}
 {{- $tag := .context.Values.global.imageTag -}}
+{{- $serviceTag := dig .name "image" "tag" "" .context.Values.services -}}
+{{- if $serviceTag -}}
+  {{- $tag = $serviceTag -}}
+{{- end -}}
 {{- printf "%s/%s:%s" $registry .name $tag -}}
 {{- end }}
