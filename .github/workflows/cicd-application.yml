@@ -242,52 +242,6 @@ jobs:
       node_version: '20'
     secrets: inherit
 
-  cicd-frontend-approval:
-    name: "Frontend - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-frontend-docker]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'frontend')
-    uses: ./.github/workflows/template-approval-gate.yml
-    with:
-      service_name: frontend
-      image_tag: ${{ needs.cicd-frontend-docker.outputs.image_tag }}
-      environment: production
-    secrets: inherit
-
-  cicd-frontend-deploy:
-    name: "Frontend - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-frontend-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'frontend')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: frontend
-      image_name: frontend
-      image_tag: ${{ needs.cicd-frontend-docker.outputs.image_tag }}
-      helm_service_key: frontend
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-frontend-notify:
-    name: "Frontend - Stage 6 - Notify"
-    needs: [detect-changes, cicd-frontend-docker, cicd-frontend-deploy]
-    if: >
-      always() &&
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'frontend')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: frontend
-      image_tag: ${{ needs.cicd-frontend-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-frontend-deploy.result }}
-    secrets: inherit
-
   # =========================================================================
   # 2. API GATEWAY SERVICE PIPELINE STAGES
   # =========================================================================
@@ -325,52 +279,6 @@ jobs:
       image_name: api-gateway
       working_directory: ./gateway
       node_version: '18'
-    secrets: inherit
-
-  cicd-api-gateway-approval:
-    name: "API Gateway - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-api-gateway-docker]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'api-gateway')
-    uses: ./.github/workflows/template-approval-gate.yml
-    with:
-      service_name: api-gateway
-      image_tag: ${{ needs.cicd-api-gateway-docker.outputs.image_tag }}
-      environment: production
-    secrets: inherit
-
-  cicd-api-gateway-deploy:
-    name: "API Gateway - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-api-gateway-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'api-gateway')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: api-gateway
-      image_name: api-gateway
-      image_tag: ${{ needs.cicd-api-gateway-docker.outputs.image_tag }}
-      helm_service_key: api-gateway
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-api-gateway-notify:
-    name: "API Gateway - Stage 6 - Notify"
-    needs: [detect-changes, cicd-api-gateway-docker, cicd-api-gateway-deploy]
-    if: >
-      always() &&
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'api-gateway')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: api-gateway
-      image_tag: ${{ needs.cicd-api-gateway-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-api-gateway-deploy.result }}
     secrets: inherit
 
   # =========================================================================
@@ -412,52 +320,6 @@ jobs:
       node_version: '18'
     secrets: inherit
 
-  cicd-auth-service-approval:
-    name: "Auth Service - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-auth-service-docker]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'auth-service')
-    uses: ./.github/workflows/template-approval-gate.yml
-    with:
-      service_name: auth-service
-      image_tag: ${{ needs.cicd-auth-service-docker.outputs.image_tag }}
-      environment: production
-    secrets: inherit
-
-  cicd-auth-service-deploy:
-    name: "Auth Service - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-auth-service-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'auth-service')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: auth-service
-      image_name: auth-service
-      image_tag: ${{ needs.cicd-auth-service-docker.outputs.image_tag }}
-      helm_service_key: auth-service
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-auth-service-notify:
-    name: "Auth Service - Stage 6 - Notify"
-    needs: [detect-changes, cicd-auth-service-docker, cicd-auth-service-deploy]
-    if: >
-      always() &&
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'auth-service')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: auth-service
-      image_tag: ${{ needs.cicd-auth-service-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-auth-service-deploy.result }}
-    secrets: inherit
-
   # =========================================================================
   # 4. CONSULTATION SERVICE PIPELINE STAGES
   # =========================================================================
@@ -495,52 +357,6 @@ jobs:
       image_name: consultation-service
       working_directory: ./services/consultation-service
       node_version: '18'
-    secrets: inherit
-
-  cicd-consultation-approval:
-    name: "Consultation - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-consultation-docker]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'consultation')
-    uses: ./.github/workflows/template-approval-gate.yml
-    with:
-      service_name: consultation-service
-      image_tag: ${{ needs.cicd-consultation-docker.outputs.image_tag }}
-      environment: production
-    secrets: inherit
-
-  cicd-consultation-deploy:
-    name: "Consultation - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-consultation-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'consultation')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: consultation-service
-      image_name: consultation-service
-      image_tag: ${{ needs.cicd-consultation-docker.outputs.image_tag }}
-      helm_service_key: consultation-service
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-consultation-notify:
-    name: "Consultation - Stage 6 - Notify"
-    needs: [detect-changes, cicd-consultation-docker, cicd-consultation-deploy]
-    if: >
-      always() &&
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'consultation')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: consultation-service
-      image_tag: ${{ needs.cicd-consultation-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-consultation-deploy.result }}
     secrets: inherit
 
   # =========================================================================
@@ -582,52 +398,6 @@ jobs:
       node_version: '18'
     secrets: inherit
 
-  cicd-prescription-approval:
-    name: "Prescription - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-prescription-docker]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'prescription')
-    uses: ./.github/workflows/template-approval-gate.yml
-    with:
-      service_name: prescription-service
-      image_tag: ${{ needs.cicd-prescription-docker.outputs.image_tag }}
-      environment: production
-    secrets: inherit
-
-  cicd-prescription-deploy:
-    name: "Prescription - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-prescription-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'prescription')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: prescription-service
-      image_name: prescription-service
-      image_tag: ${{ needs.cicd-prescription-docker.outputs.image_tag }}
-      helm_service_key: prescription-service
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-prescription-notify:
-    name: "Prescription - Stage 6 - Notify"
-    needs: [detect-changes, cicd-prescription-docker, cicd-prescription-deploy]
-    if: >
-      always() &&
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'prescription')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: prescription-service
-      image_tag: ${{ needs.cicd-prescription-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-prescription-deploy.result }}
-    secrets: inherit
-
   # =========================================================================
   # 6. REMINDER SERVICE PIPELINE STAGES
   # =========================================================================
@@ -665,52 +435,6 @@ jobs:
       image_name: reminder-service
       working_directory: ./services/reminder-service
       node_version: '18'
-    secrets: inherit
-
-  cicd-reminder-approval:
-    name: "Reminder - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-reminder-docker]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'reminder')
-    uses: ./.github/workflows/template-approval-gate.yml
-    with:
-      service_name: reminder-service
-      image_tag: ${{ needs.cicd-reminder-docker.outputs.image_tag }}
-      environment: production
-    secrets: inherit
-
-  cicd-reminder-deploy:
-    name: "Reminder - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-reminder-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'reminder')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: reminder-service
-      image_name: reminder-service
-      image_tag: ${{ needs.cicd-reminder-docker.outputs.image_tag }}
-      helm_service_key: reminder-service
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-reminder-notify:
-    name: "Reminder - Stage 6 - Notify"
-    needs: [detect-changes, cicd-reminder-docker, cicd-reminder-deploy]
-    if: >
-      always() &&
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'reminder')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: reminder-service
-      image_tag: ${{ needs.cicd-reminder-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-reminder-deploy.result }}
     secrets: inherit
 
   # =========================================================================
@@ -752,52 +476,6 @@ jobs:
       node_version: '18'
     secrets: inherit
 
-  cicd-labreport-approval:
-    name: "Lab Report - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-labreport-docker]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'labreport')
-    uses: ./.github/workflows/template-approval-gate.yml
-    with:
-      service_name: labreport-service
-      image_tag: ${{ needs.cicd-labreport-docker.outputs.image_tag }}
-      environment: production
-    secrets: inherit
-
-  cicd-labreport-deploy:
-    name: "Lab Report - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-labreport-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'labreport')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: labreport-service
-      image_name: labreport-service
-      image_tag: ${{ needs.cicd-labreport-docker.outputs.image_tag }}
-      helm_service_key: labreport-service
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-labreport-notify:
-    name: "Lab Report - Stage 6 - Notify"
-    needs: [detect-changes, cicd-labreport-docker, cicd-labreport-deploy]
-    if: >
-      always() &&
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'labreport')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: labreport-service
-      image_tag: ${{ needs.cicd-labreport-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-labreport-deploy.result }}
-    secrets: inherit
-
   # =========================================================================
   # 8. SYMPTOM SERVICE PIPELINE STAGES
   # =========================================================================
@@ -835,52 +513,6 @@ jobs:
       image_name: symptom-service
       working_directory: ./services/symptom-service
       node_version: '18'
-    secrets: inherit
-
-  cicd-symptom-approval:
-    name: "Symptom - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-symptom-docker]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'symptom')
-    uses: ./.github/workflows/template-approval-gate.yml
-    with:
-      service_name: symptom-service
-      image_tag: ${{ needs.cicd-symptom-docker.outputs.image_tag }}
-      environment: production
-    secrets: inherit
-
-  cicd-symptom-deploy:
-    name: "Symptom - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-symptom-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'symptom')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: symptom-service
-      image_name: symptom-service
-      image_tag: ${{ needs.cicd-symptom-docker.outputs.image_tag }}
-      helm_service_key: symptom-service
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-symptom-notify:
-    name: "Symptom - Stage 6 - Notify"
-    needs: [detect-changes, cicd-symptom-docker, cicd-symptom-deploy]
-    if: >
-      always() &&
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'symptom')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: symptom-service
-      image_tag: ${{ needs.cicd-symptom-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-symptom-deploy.result }}
     secrets: inherit
 
   # =========================================================================
@@ -922,52 +554,6 @@ jobs:
       node_version: '18'
     secrets: inherit
 
-  cicd-ai-companion-approval:
-    name: "AI Companion - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-ai-companion-docker]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'ai-companion')
-    uses: ./.github/workflows/template-approval-gate.yml
-    with:
-      service_name: ai-companion-service
-      image_tag: ${{ needs.cicd-ai-companion-docker.outputs.image_tag }}
-      environment: production
-    secrets: inherit
-
-  cicd-ai-companion-deploy:
-    name: "AI Companion - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-ai-companion-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'ai-companion')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: ai-companion-service
-      image_name: ai-companion-service
-      image_tag: ${{ needs.cicd-ai-companion-docker.outputs.image_tag }}
-      helm_service_key: ai-companion-service
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-ai-companion-notify:
-    name: "AI Companion - Stage 6 - Notify"
-    needs: [detect-changes, cicd-ai-companion-docker, cicd-ai-companion-deploy]
-    if: >
-      always() &&
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'ai-companion')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: ai-companion-service
-      image_tag: ${{ needs.cicd-ai-companion-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-ai-companion-deploy.result }}
-    secrets: inherit
-
   # =========================================================================
   # 10. HEALTH SUMMARY SERVICE PIPELINE STAGES
   # =========================================================================
@@ -1005,52 +591,6 @@ jobs:
       image_name: health-summary-service
       working_directory: ./services/health-summary-service
       node_version: '18'
-    secrets: inherit
-
-  cicd-health-summary-approval:
-    name: "Health Summary - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-health-summary-docker]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'health-summary')
-    uses: ./.github/workflows/template-approval-gate.yml
-    with:
-      service_name: health-summary-service
-      image_tag: ${{ needs.cicd-health-summary-docker.outputs.image_tag }}
-      environment: production
-    secrets: inherit
-
-  cicd-health-summary-deploy:
-    name: "Health Summary - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-health-summary-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'health-summary')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: health-summary-service
-      image_name: health-summary-service
-      image_tag: ${{ needs.cicd-health-summary-docker.outputs.image_tag }}
-      helm_service_key: health-summary-service
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-health-summary-notify:
-    name: "Health Summary - Stage 6 - Notify"
-    needs: [detect-changes, cicd-health-summary-docker, cicd-health-summary-deploy]
-    if: >
-      always() &&
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'health-summary')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: health-summary-service
-      image_tag: ${{ needs.cicd-health-summary-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-health-summary-deploy.result }}
     secrets: inherit
 
   # =========================================================================
@@ -1092,71 +632,218 @@ jobs:
       node_version: '18'
     secrets: inherit
 
-  cicd-family-approval:
-    name: "Family - Stage 4 - Approval Gate"
-    needs: [detect-changes, cicd-family-docker]
-    if: >
+  # =========================================================================
+  # 12. UNIFIED APPROVAL & HELM DEPLOY STAGES
+  # =========================================================================
+  cicd-approval:
+    name: "DocBridge - Stage 4 - Approval Gate"
+    needs:
+      - detect-changes
+      - cicd-db-migrations
+      - cicd-frontend-docker
+      - cicd-api-gateway-docker
+      - cicd-auth-service-docker
+      - cicd-consultation-docker
+      - cicd-prescription-docker
+      - cicd-reminder-docker
+      - cicd-labreport-docker
+      - cicd-symptom-docker
+      - cicd-ai-companion-docker
+      - cicd-health-summary-docker
+      - cicd-family-docker
+    if: |
+      always() &&
       github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'family')
+      needs.detect-changes.outputs.any_changed == 'true' &&
+      (needs.cicd-db-migrations.result == 'success' || needs.cicd-db-migrations.result == 'skipped') &&
+      (needs.cicd-frontend-docker.result == 'success' || needs.cicd-frontend-docker.result == 'skipped') &&
+      (needs.cicd-api-gateway-docker.result == 'success' || needs.cicd-api-gateway-docker.result == 'skipped') &&
+      (needs.cicd-auth-service-docker.result == 'success' || needs.cicd-auth-service-docker.result == 'skipped') &&
+      (needs.cicd-consultation-docker.result == 'success' || needs.cicd-consultation-docker.result == 'skipped') &&
+      (needs.cicd-prescription-docker.result == 'success' || needs.cicd-prescription-docker.result == 'skipped') &&
+      (needs.cicd-reminder-docker.result == 'success' || needs.cicd-reminder-docker.result == 'skipped') &&
+      (needs.cicd-labreport-docker.result == 'success' || needs.cicd-labreport-docker.result == 'skipped') &&
+      (needs.cicd-symptom-docker.result == 'success' || needs.cicd-symptom-docker.result == 'skipped') &&
+      (needs.cicd-ai-companion-docker.result == 'success' || needs.cicd-ai-companion-docker.result == 'skipped') &&
+      (needs.cicd-health-summary-docker.result == 'success' || needs.cicd-health-summary-docker.result == 'skipped') &&
+      (needs.cicd-family-docker.result == 'success' || needs.cicd-family-docker.result == 'skipped')
     uses: ./.github/workflows/template-approval-gate.yml
     with:
-      service_name: family-service
-      image_tag: ${{ needs.cicd-family-docker.outputs.image_tag }}
+      service_name: DocBridge Application
+      image_tag: ${{ github.sha }}
       environment: production
     secrets: inherit
 
-  cicd-family-deploy:
-    name: "Family - Stage 5 - Helm Deploy"
-    needs: [detect-changes, cicd-family-approval, setup-infrastructure]
-    if: >
-      github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'family')
-    uses: ./.github/workflows/template-helm-deploy.yml
-    with:
-      service_name: family-service
-      image_name: family-service
-      image_tag: ${{ needs.cicd-family-docker.outputs.image_tag }}
-      helm_service_key: family-service
-      kv_name: ${{ needs.setup-infrastructure.outputs.kv_name }}
-      identity_id: ${{ needs.setup-infrastructure.outputs.identity_id }}
-      postgres_fqdn: ${{ needs.setup-infrastructure.outputs.postgres_fqdn }}
-      agw_ip: ${{ needs.setup-infrastructure.outputs.agw_ip }}
-      acr_login_server: ${{ needs.setup-infrastructure.outputs.acr_login_server }}
-    secrets: inherit
-
-  cicd-family-notify:
-    name: "Family - Stage 6 - Notify"
-    needs: [detect-changes, cicd-family-docker, cicd-family-deploy]
-    if: >
+  cicd-deploy:
+    name: "DocBridge - Stage 5 - Helm Deploy"
+    needs:
+      - detect-changes
+      - setup-infrastructure
+      - cicd-approval
+      - cicd-db-migrations
+      - cicd-frontend-docker
+      - cicd-api-gateway-docker
+      - cicd-auth-service-docker
+      - cicd-consultation-docker
+      - cicd-prescription-docker
+      - cicd-reminder-docker
+      - cicd-labreport-docker
+      - cicd-symptom-docker
+      - cicd-ai-companion-docker
+      - cicd-health-summary-docker
+      - cicd-family-docker
+    if: |
       always() &&
       github.event_name != 'pull_request' &&
-      contains(fromJson(needs.detect-changes.outputs.changed_services), 'family')
-    uses: ./.github/workflows/template-notify.yml
-    with:
-      service_name: family-service
-      image_tag: ${{ needs.cicd-family-docker.outputs.image_tag }}
-      status: ${{ needs.cicd-family-deploy.result }}
-    secrets: inherit
+      needs.cicd-approval.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-  # =========================================================================
-  # 12. PIPELINE SUMMARY
-  # =========================================================================
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group docbridge-rg \
+            --name docbridge-dev-aks \
+            --overwrite-existing
+
+      - name: Run Helm Upgrade/Install
+        run: |
+          MAX_RETRIES=3
+          RETRY_DELAY=10
+          success=false
+          
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i of $MAX_RETRIES to run Helm upgrade..."
+            if helm upgrade --install docbridge ./helm/docbridge \
+              --namespace docbridge \
+              --create-namespace \
+              --values helm/docbridge/values.yaml \
+              --values helm/docbridge/values.dev.yaml \
+              --set azure.keyVaultName=${{ needs.setup-infrastructure.outputs.kv_name }} \
+              --set azure.workloadIdentityClientId=${{ needs.setup-infrastructure.outputs.identity_id }} \
+              --set azure.tenantId=${{ secrets.AZURE_TENANT_ID }} \
+              --set database.host=${{ needs.setup-infrastructure.outputs.postgres_fqdn }} \
+              --set gateway.corsOrigin=http://${{ needs.setup-infrastructure.outputs.agw_ip }} \
+              --set services.db-migrations.image.tag=${{ needs.cicd-db-migrations.outputs.image_tag }} \
+              --set services.frontend.image.tag=${{ needs.cicd-frontend-docker.outputs.image_tag }} \
+              --set services.api-gateway.image.tag=${{ needs.cicd-api-gateway-docker.outputs.image_tag }} \
+              --set services.auth-service.image.tag=${{ needs.cicd-auth-service-docker.outputs.image_tag }} \
+              --set services.consultation-service.image.tag=${{ needs.cicd-consultation-docker.outputs.image_tag }} \
+              --set services.prescription-service.image.tag=${{ needs.cicd-prescription-docker.outputs.image_tag }} \
+              --set services.reminder-service.image.tag=${{ needs.cicd-reminder-docker.outputs.image_tag }} \
+              --set services.labreport-service.image.tag=${{ needs.cicd-labreport-docker.outputs.image_tag }} \
+              --set services.symptom-service.image.tag=${{ needs.cicd-symptom-docker.outputs.image_tag }} \
+              --set services.ai-companion-service.image.tag=${{ needs.cicd-ai-companion-docker.outputs.image_tag }} \
+              --set services.health-summary-service.image.tag=${{ needs.cicd-health-summary-docker.outputs.image_tag }} \
+              --set services.family-service.image.tag=${{ needs.cicd-family-docker.outputs.image_tag }} \
+              --wait \
+              --timeout 10m; then
+              success=true
+              echo "Helm upgrade completed successfully!"
+              break
+            else
+              echo "Helm upgrade attempt $i failed. Waiting $RETRY_DELAY seconds before retrying..."
+              sleep $RETRY_DELAY
+            fi
+          done
+          
+          if [ "$success" = false ]; then
+            echo "Helm upgrade failed after $MAX_RETRIES attempts."
+            exit 1
+          fi
+
+      - name: Verify Deployment Health
+        run: |
+          kubectl get pods -n docbridge
+
+      - name: Run Smoke Test against Gateway
+        run: |
+          AGW_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            --connect-timeout 15 \
+            http://${{ needs.setup-infrastructure.outputs.agw_ip }}/api/v1/health)
+          if [ "$AGW_RESPONSE" != "200" ]; then
+            echo "Health check failed: HTTP $AGW_RESPONSE"
+            exit 1
+          fi
+          echo "Health check passed: HTTP $AGW_RESPONSE"
+
+      - name: Handle Rollback on Failure
+        if: failure()
+        run: |
+          echo "====================== DEPLOYMENT FAILED — TRIGGERING HELM ROLLBACK ======================"
+          helm rollback docbridge -n docbridge
+          echo "Current pod status after rollback:"
+          kubectl get pods -n docbridge
+
+      - name: Send Success Notification Email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          from: DocBridge DevOps <${{ secrets.SMTP_USERNAME }}>
+          to: ${{ secrets.ALERT_EMAIL }}
+          subject: SUCCESS - Deploy DocBridge Application - Run #${{ github.run_number }}
+          body: |
+            The Helm deployment of DocBridge Application has succeeded.
+            
+            Status: SUCCESS
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
+            
+            App Gateway IP: http://${{ needs.setup-infrastructure.outputs.agw_ip }}
+            Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            Changed Services: ${{ needs.detect-changes.outputs.changed_services }}
+
+      - name: Send Failure/Rollback Notification Email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          from: DocBridge DevOps <${{ secrets.SMTP_USERNAME }}>
+          to: ${{ secrets.ALERT_EMAIL }}
+          subject: FAILED + ROLLED BACK - Deploy DocBridge Application - Run #${{ github.run_number }}
+          body: |
+            The Helm deployment of DocBridge Application has FAILED.
+            An automatic rollback to the last known healthy state has been executed.
+            
+            Status: FAILED (Rolled back)
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
+            
+            App Gateway IP: http://${{ needs.setup-infrastructure.outputs.agw_ip }}
+            Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            Changed Services: ${{ needs.detect-changes.outputs.changed_services }}
+
   pipeline-summary:
     name: Pipeline Summary
     needs:
       - detect-changes
       - cicd-db-migrations
-      - cicd-frontend-deploy
-      - cicd-api-gateway-deploy
-      - cicd-auth-service-deploy
-      - cicd-consultation-deploy
-      - cicd-prescription-deploy
-      - cicd-reminder-deploy
-      - cicd-labreport-deploy
-      - cicd-symptom-deploy
-      - cicd-ai-companion-deploy
-      - cicd-health-summary-deploy
-      - cicd-family-deploy
+      - cicd-deploy
     if: always()
     runs-on: ubuntu-latest
     steps:
