@@ -13,6 +13,15 @@ const logger = require('./config/logger');
 
 const app = express();
 
+// Health check — no auth required (registered before rate limiting and other middleware)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'api-gateway' });
+});
+
+app.get('/api/v1/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'api-gateway' });
+});
+
 // Security and parsing middleware
 app.use(helmet());
 app.use(configureCors());
@@ -21,15 +30,6 @@ app.use(hpp());
 app.use(requestLogger);
 app.use(generalLimiter);
 app.use(idempotency);
-
-// Health check — no auth required
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', service: 'api-gateway' });
-});
-
-app.get('/api/v1/health', (req, res) => {
-  res.status(200).json({ status: 'ok', service: 'api-gateway' });
-});
 
 app.get('/test-error', (req, res) => {
   throw new Error('This is a deliberate error for testing stack traces.');
