@@ -1,0 +1,145 @@
+name: Template Helm Deploy
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+      image_name:
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+      helm_service_key:
+        required: true
+        type: string
+      kv_name:
+        required: true
+        type: string
+      identity_id:
+        required: true
+        type: string
+      postgres_fqdn:
+        required: true
+        type: string
+      agw_ip:
+        required: true
+        type: string
+      acr_login_server:
+        required: true
+        type: string
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      DB_PASSWORD:
+        required: true
+      JWT_ACCESS_SECRET:
+        required: true
+      JWT_REFRESH_SECRET:
+        required: true
+      AZURE_OPENAI_KEY:
+        required: true
+      SMTP_USERNAME:
+        required: true
+      SMTP_PASSWORD:
+        required: true
+      ALERT_EMAIL:
+        required: true
+
+jobs:
+  helm-deploy:
+    name: Helm Deploy to AKS - ${{ inputs.service_name }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group docbridge-rg \
+            --name docbridge-dev-aks \
+            --overwrite-existing
+
+      - name: Run Helm Upgrade/Install
+        run: |
+          helm upgrade --install docbridge ./helm/docbridge \
+            --namespace docbridge \
+            --create-namespace \
+            --values helm/docbridge/values.yaml \
+            --values helm/docbridge/values.dev.yaml \
+            --set azure.keyVaultName=${{ inputs.kv_name }} \
+            --set azure.workloadIdentityClientId=${{ inputs.identity_id }} \
+            --set azure.tenantId=${{ secrets.AZURE_TENANT_ID }} \
+            --set database.host=${{ inputs.postgres_fqdn }} \
+            --set gateway.corsOrigin=http://${{ inputs.agw_ip }} \
+            --set image.tag=${{ inputs.image_tag }} \
+            --wait \
+            --timeout 8m
+
+      - name: Verify Deployment Health
+        run: |
+          kubectl rollout status deployment/${{ inputs.service_name }} -n docbridge --timeout=300s
+          kubectl get pods -n docbridge
+
+      - name: Run Smoke Test against Gateway
+        run: |
+          AGW_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            --connect-timeout 15 \
+            http://${{ inputs.agw_ip }}/api/v1/health)
+          if [ "$AGW_RESPONSE" != "200" ]; then
+            echo "Health check failed: HTTP $AGW_RESPONSE"
+            exit 1
+          fi
+          echo "Health check passed: HTTP $AGW_RESPONSE"
+
+      - name: Handle Rollback on Failure
+        if: failure()
+        run: |
+          echo "====================== DEPLOYMENT FAILED — TRIGGERING HELM ROLLBACK ======================"
+          helm rollback docbridge -n docbridge
+          echo "Current pod status after rollback:"
+          kubectl get pods -n docbridge
+
+      - name: Send Failure/Rollback Email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          from: DocBridge DevOps <${{ secrets.SMTP_USERNAME }}>
+          to: ${{ secrets.ALERT_EMAIL }}
+          subject: FAILED + ROLLED BACK - Helm Deploy - ${{ inputs.service_name }} - DocBridge
+          body: |
+            The Helm deployment stage has FAILED for service: ${{ inputs.service_name }}.
+            An automatic rollback to the last known healthy state has been executed.
+
+            Service: ${{ inputs.service_name }}
+            Image Tag: ${{ inputs.image_tag }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
+            
+            App Gateway IP: ${{ inputs.agw_ip }}
+            Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            Action Required: Please review the deployment logs above and check the health state of the AKS pods.

@@ -45,7 +45,7 @@ module.exports = {
         report_type: 'Biochemistry',
         lab_name: 'SRL Diagnostics, Koramangala',
         report_date: oneMonthAgo.toISOString().split('T')[0],
-        ordered_by_doctor: 'Dr. Sneha Kapoor',
+        ordered_by_doctor: 'Dr. Rajesh Sharma',
         results: JSON.stringify([
           { test_name: 'Total Cholesterol', value: 218, unit: 'mg/dL', reference_range: '< 200', status: 'high' },
           { test_name: 'LDL Cholesterol', value: 142, unit: 'mg/dL', reference_range: '< 100', status: 'high' },

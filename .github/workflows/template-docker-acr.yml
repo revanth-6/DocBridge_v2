@@ -1,0 +1,147 @@
+name: Template Docker ACR
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+      image_name:
+        required: true
+        type: string
+      working_directory:
+        required: false
+        type: string
+        default: '.'
+      node_version:
+        required: false
+        type: string
+        default: '18'
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      SMTP_USERNAME:
+        required: true
+      SMTP_PASSWORD:
+        required: true
+      ALERT_EMAIL:
+        required: true
+    outputs:
+      image_tag:
+        description: "The image tag used for this build (github SHA short)"
+        value: ${{ jobs.docker-acr.outputs.image_tag }}
+      image_full:
+        description: "Full image reference with registry and tag"
+        value: ${{ jobs.docker-acr.outputs.image_full }}
+
+jobs:
+  docker-acr:
+    name: Docker Build + Trivy + Push to ACR - ${{ inputs.service_name }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      image_full: ${{ steps.meta.outputs.image_full }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Image Metadata
+        id: meta
+        run: |
+          short_sha=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "image_tag=$short_sha" >> $GITHUB_OUTPUT
+          echo "image_full=docbridgedevacr.azurecr.io/${{ inputs.image_name }}:$short_sha" >> $GITHUB_OUTPUT
+          echo "acr_registry=docbridgedevacr.azurecr.io" >> $GITHUB_OUTPUT
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name docbridgedevacr
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image Locally
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.working_directory }}
+          push: false
+          load: true
+          tags: local-build
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: local-build
+          format: table
+          output: trivy-image-report.txt
+          severity: CRITICAL,HIGH
+          exit-code: 0
+        continue-on-error: true
+
+      - name: Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: ${{ inputs.working_directory }}
+          format: table
+          output: trivy-fs-report.txt
+          severity: CRITICAL,HIGH
+          exit-code: 0
+        continue-on-error: true
+
+      - name: Upload Trivy Reports Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-reports-${{ inputs.service_name }}-${{ github.run_number }}
+          path: |
+            trivy-image-report.txt
+            trivy-fs-report.txt
+          retention-days: 30
+
+      - name: Push Image to ACR
+        run: |
+          docker tag local-build docbridgedevacr.azurecr.io/${{ inputs.image_name }}:${{ steps.meta.outputs.image_tag }}
+          docker tag local-build docbridgedevacr.azurecr.io/${{ inputs.image_name }}:latest
+          docker push docbridgedevacr.azurecr.io/${{ inputs.image_name }}:${{ steps.meta.outputs.image_tag }}
+          docker push docbridgedevacr.azurecr.io/${{ inputs.image_name }}:latest
+
+      - name: Send Docker Failure Email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          from: DocBridge DevOps <${{ secrets.SMTP_USERNAME }}>
+          to: ${{ secrets.ALERT_EMAIL }}
+          subject: FAILED - Docker Build/Push - ${{ inputs.service_name }} - DocBridge
+          body: |
+            The Docker container build or push stage has FAILED for service: ${{ inputs.service_name }}.
+
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
+            
+            ACR Registry: docbridgedevacr.azurecr.io
+            Image Name: ${{ inputs.image_name }}
+            Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            Action Required: Please check the build logs for Dockerfile step failures, syntax errors, or container registry login issues.

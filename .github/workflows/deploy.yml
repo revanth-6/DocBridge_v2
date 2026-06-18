@@ -1,19 +1,27 @@
-name: "DocBridge Deploy to AKS"
+name: "DocBridge CI/CD Pipeline"
 
 on:
   push:
     branches:
       - main
     paths:
+      - "terraform/**"
       - "services/**"
       - "frontend/**"
       - "gateway/**"
       - "kubernetes/**"
       - "database/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "terraform/**"
+  workflow_dispatch:
 
 permissions:
   id-token: write
   contents: read
+  pull-requests: write
 
 env:
   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -23,8 +31,118 @@ env:
   TF_VERSION: "1.5.7"
 
 jobs:
+  terraform-plan:
+    name: "Terraform Validate and Plan"
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: "Azure Login (OIDC)"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.ARM_CLIENT_ID }}
+          tenant-id: ${{ env.ARM_TENANT_ID }}
+          subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
+
+      - name: "Terraform Init"
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=docbridge-rg" \
+            -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT_NAME }}" \
+            -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
+            -backend-config="key=dev.terraform.tfstate"
+
+      - name: "Terraform Format check"
+        run: terraform fmt -check -recursive
+
+      - name: "Terraform Validate"
+        run: terraform validate
+
+      - name: "Terraform Plan"
+        id: plan
+        run: |
+          terraform plan -no-color -out=tfplan \
+            -var="subscription_id=${{ env.ARM_SUBSCRIPTION_ID }}" \
+            -var="owner=ArjunMehta" \
+            -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
+            -var="db_password=${{ secrets.DB_PASSWORD }}" \
+            -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
+            -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
+            -var="azure_openai_key=${{ secrets.AZURE_OPENAI_KEY }}"
+
+      - name: "Upload Plan Artifact"
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan
+          path: terraform/tfplan
+
+      - name: "Publish Plan to PR"
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '### Terraform Plan Succeeded ✅\nPlan binary uploaded as artifact. Merging this PR will execute apply on main.'
+            })
+
+  terraform-apply:
+    name: "Terraform Apply"
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: "Azure Login (OIDC)"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.ARM_CLIENT_ID }}
+          tenant-id: ${{ env.ARM_TENANT_ID }}
+          subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
+
+      - name: "Terraform Init"
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=docbridge-rg" \
+            -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT_NAME }}" \
+            -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
+            -backend-config="key=dev.terraform.tfstate"
+
+      - name: "Terraform Apply"
+        run: |
+          terraform apply -auto-approve \
+            -var="subscription_id=${{ env.ARM_SUBSCRIPTION_ID }}" \
+            -var="owner=ArjunMehta" \
+            -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
+            -var="db_password=${{ secrets.DB_PASSWORD }}" \
+            -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
+            -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
+            -var="azure_openai_key=${{ secrets.AZURE_OPENAI_KEY }}"
+
   deploy:
     name: "Build, Push and Deploy"
+    needs: terraform-apply
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
@@ -68,7 +186,6 @@ jobs:
       - name: "Determine Changed Services"
         id: changes
         run: |
-          # Fallback if before commit is empty or all zeros
           DIFF_BASE=${{ github.event.before }}
           if [ "$DIFF_BASE" = "0000000000000000000000000000000000000000" ] || [ -z "$DIFF_BASE" ]; then
             DIFF_BASE="HEAD~1"
@@ -79,7 +196,6 @@ jobs:
           echo "Changed files:"
           echo "$CHANGES"
           
-          # Initialize variables
           BUILD_GATEWAY=false
           BUILD_FRONTEND=false
           BUILD_AUTH=false
@@ -104,8 +220,7 @@ jobs:
           if echo "$CHANGES" | grep -q "^services/health-summary-service/"; then BUILD_SUMMARY=true; fi
           if echo "$CHANGES" | grep -q "^services/family-service/"; then BUILD_FAMILY=true; fi
 
-          # If first run or direct manifest changes, build everything
-          if echo "$CHANGES" | grep -q "^kubernetes/" || [ "$DIFF_BASE" = "HEAD~1" ]; then
+          if echo "$CHANGES" | grep -q "^kubernetes/" || echo "$CHANGES" | grep -q "^terraform/" || [ "$DIFF_BASE" = "HEAD~1" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             BUILD_GATEWAY=true
             BUILD_FRONTEND=true
             BUILD_AUTH=true
@@ -223,19 +338,12 @@ jobs:
 
       - name: "Substitute Placeholders in Kubernetes Manifests"
         run: |
-          # Service Account substitution
           sed -i "s|WORKLOAD_IDENTITY_CLIENT_ID_PLACEHOLDER|${{ env.IDENTITY_CLIENT_ID }}|g" kubernetes/serviceaccount.yml
-          
-          # SecretProviderClass substitution
           sed -i "s|KEY_VAULT_NAME_PLACEHOLDER|${{ env.KV_NAME }}|g" kubernetes/secretproviderclass.yml
           sed -i "s|WORKLOAD_IDENTITY_CLIENT_ID_PLACEHOLDER|${{ env.IDENTITY_CLIENT_ID }}|g" kubernetes/secretproviderclass.yml
           sed -i "s|AZURE_TENANT_ID_PLACEHOLDER|${{ env.ARM_TENANT_ID }}|g" kubernetes/secretproviderclass.yml
-          
-          # ConfigMap substitution
           sed -i "s|POSTGRES_FQDN_PLACEHOLDER|${{ env.POSTGRES_FQDN }}|g" kubernetes/configmap.yml
           sed -i "s|APP_GATEWAY_IP_PLACEHOLDER|${{ env.AGW_IP }}|g" kubernetes/configmap.yml
-          
-          # Deployment and Job Image substitution
           find kubernetes/deployments/ -name "*.yml" -exec sed -i "s|ACR_LOGIN_SERVER_PLACEHOLDER|${{ env.ACR_SERVER }}|g" {} \;
           find kubernetes/jobs/ -name "*.yml" -exec sed -i "s|ACR_LOGIN_SERVER_PLACEHOLDER|${{ env.ACR_SERVER }}|g" {} \;
 
@@ -250,14 +358,12 @@ jobs:
 
       - name: "Run Database Migrations"
         run: |
-          # Delete existing migration job if it exists (from previous run)
           kubectl delete job db-migration -n docbridge --ignore-not-found=true
           kubectl apply -f kubernetes/jobs/db-migration-job.yml
           kubectl wait --for=condition=complete job/db-migration -n docbridge --timeout=300s
 
       - name: "Run Database Seeders"
         run: |
-          # Delete existing seeder job if it exists (from previous run)
           kubectl delete job db-seeder -n docbridge --ignore-not-found=true
           kubectl apply -f kubernetes/jobs/db-seeder-job.yml
           kubectl wait --for=condition=complete job/db-seeder -n docbridge --timeout=120s
@@ -282,11 +388,7 @@ jobs:
             
             if [ "$is_changed" = "true" ]; then
               echo "Updating image for deployment/$service_name to latest SHA: ${{ github.sha }}"
-              
-              # Set image to trigger rolling update with SHA tag
               kubectl set image deployment/$service_name $service_name=${{ env.ACR_SERVER }}/$service_name:${{ github.sha }} -n docbridge
-              
-              # Validate deployment status (5m timeout)
               if ! kubectl rollout status deployment/$service_name -n docbridge --timeout=5m; then
                 echo "Rollout failed for deployment/$service_name! Rolling back..."
                 kubectl rollout undo deployment/$service_name -n docbridge
@@ -298,8 +400,6 @@ jobs:
       - name: "Verify Running Pods"
         run: |
           kubectl get pods -n docbridge
-          
-          # Check if any pods are in CrashLoopBackOff or Error state
           BAD_PODS=$(kubectl get pods -n docbridge --no-headers | grep -E 'CrashLoopBackOff|Error' || true)
           if [ ! -z "$BAD_PODS" ]; then
             echo "Failed Pods detected:"

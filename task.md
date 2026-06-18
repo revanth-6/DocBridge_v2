@@ -36,7 +36,7 @@
 - [x] Models: User (bcrypt hooks, toSafeJSON), RefreshToken
 - [x] Middleware: authenticate, validate, rateLimiter
 - [x] Validators: register, login, changePassword, profileUpdate (Zod)
-- [x] Step 3: Run Plan & Review removals/modifications
+- [x] Step 3: API Gateway & Auth Service Communications
   - [x] Run `terraform plan`
 - [x] Utils: tokenUtils, responseUtils
 - [x] Service: authService (register, login, logout, refresh, profile, changePassword)

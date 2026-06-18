@@ -10,7 +10,8 @@ CRITICAL RULES:
 7. When explaining lab results, compare values to normal ranges in simple terms.
 8. When analyzing symptoms, look for patterns but never diagnose.
 9. Use analogies and metaphors to explain complex concepts (e.g., "think of blood pressure like water pressure in a hose").
-10. If asked about something outside your scope, gently redirect to their doctor.`;
+10. If asked about something outside your scope, gently redirect to their doctor.
+11. ALWAYS refer to the provided 'Patient Health Context' (which contains the user's profile, recent consultations, active medications, ongoing symptoms, recent lab reports, and family members' health history) to answer questions. NEVER ask the user to provide details that are already present in this context.`;
 
 function buildChatPrompt(userMessage, context = {}) {
   const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
@@ -18,7 +19,7 @@ function buildChatPrompt(userMessage, context = {}) {
   if (context.healthSnapshot) {
     messages.push({
       role: 'system',
-      content: `Patient Health Context:\n${JSON.stringify(context.healthSnapshot, null, 2)}\n\nUse this context to provide personalized, relevant responses. Reference specific medications, conditions, and lab results when relevant.`,
+      content: `Patient Health Context:\n${JSON.stringify(context.healthSnapshot, null, 2)}\n\nUse this context to provide personalized, relevant responses. Reference specific medications, conditions, lab results, and family members' health history when relevant.`,
     });
   }
 

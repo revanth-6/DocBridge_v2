@@ -228,3 +228,109 @@ terraform destroy \
   -var="azure_openai_key=YOUR_OPENAI_KEY"
 ```
 Or manually delete the resource group via the Azure Portal.
+
+---
+
+## 14. Helm Chart Deployment and Upgrades
+
+After migrating from raw manifests to a unified Helm chart, the application resources are managed through Helm.
+
+### First-Time Installation or Upgrades
+
+To install or upgrade the DocBridge application using Helm:
+
+1. Retrieve the Terraform outputs:
+   ```bash
+   cd terraform
+   KV_NAME=$(terraform output -raw key_vault_name)
+   IDENTITY_ID=$(terraform output -raw workload_identity_client_id)
+   POSTGRES_FQDN=$(terraform output -raw postgres_fqdn)
+   AGW_IP=$(terraform output -raw app_gateway_public_ip)
+   TENANT_ID="YOUR_AZURE_TENANT_ID"
+   ```
+
+2. Run the Helm upgrade command:
+   ```bash
+   helm upgrade --install docbridge ./helm/docbridge \
+     --namespace docbridge \
+     --create-namespace \
+     --values helm/docbridge/values.yaml \
+     --values helm/docbridge/values.dev.yaml \
+     --set azure.keyVaultName=$KV_NAME \
+     --set azure.workloadIdentityClientId=$IDENTITY_ID \
+     --set azure.tenantId=$TENANT_ID \
+     --set database.host=$POSTGRES_FQDN \
+     --set gateway.corsOrigin=http://$AGW_IP \
+     --wait \
+     --timeout 10m
+   ```
+
+### Important: Never Use kubectl apply After Helm
+
+> [!WARNING]
+> After Helm takes ownership of the application resources, **kubectl apply -f kubernetes/ must never be used again** to deploy or manage application configurations. 
+> 
+> Doing so causes configuration drift where Helm's stored release state does not match what is actually deployed on the cluster, resulting in unpredictable behavior or failed rollouts on subsequent Helm upgrades.
+> 
+> - **kubectl** must only be used for read operations (e.g., checking logs, describing pods, or viewing statuses):
+>   ```bash
+>   kubectl get pods -n docbridge
+>   kubectl describe pod -n docbridge
+>   kubectl logs -n docbridge deployment/api-gateway
+>   kubectl get ingress -n docbridge
+>   ```
+> - **All updates** to replicas, environment variables, secret mappings, image versions, or ingress configuration must be done by modifying the Helm values and running `helm upgrade --install`.
+
+---
+
+## 15. Pipeline System Setup (GitHub Actions & Infrastructure Automation)
+
+This section details the configuration steps required to fully activate the Terraform infrastructure pipeline and the microservice CI/CD pipelines.
+
+### 15.1. GitHub Secrets Setup
+Add the following 5 new secrets to your GitHub repository under **Settings > Secrets and variables > Actions > Repository secrets**:
+
+| Secret Name | Purpose / Description | How to Get |
+| :--- | :--- | :--- |
+| `SONAR_TOKEN` | Authentication token for SonarCloud code quality scans. | sonarcloud.io > My Account > Security > Tokens > Generate a User Token |
+| `SONAR_ORGANIZATION` | SonarCloud organization key | sonarcloud.io > Your organization page (found in URL/Settings) |
+| `SNYK_TOKEN` | Snyk token to run SCA dependency checks. | app.snyk.io > Account Settings > General > Auth Token |
+| `SMTP_USERNAME` | Gmail address used to send DevOps notification emails. | e.g. `yourdevops@gmail.com` |
+| `SMTP_PASSWORD` | Gmail App Password (16 characters, NOT regular password). | Google Account > Security > App Passwords (needs 2FA enabled) |
+
+### 15.2. GitHub Environments Setup
+Configure the following two environments in your GitHub repository under **Settings > Environments**:
+
+1. **development**:
+   - Protection rules: None (auto-approves deployments on push to `main`).
+2. **production**:
+   - Protection rules: Enable **Required reviewers** and add your own GitHub username. This creates the deployment approval gate UI.
+
+### 15.3. SonarCloud Integration
+1. Log in to [sonarcloud.io](https://sonarcloud.io/) using your GitHub account.
+2. Import your GitHub repository into SonarCloud.
+3. For each of the 11 projects (Frontend, API Gateway, and 9 microservices), **disable Automatic Analysis** in the SonarCloud project settings (analysis is executed inside the GitHub Action runner).
+4. Each service directory contains a `sonar-project.properties` file defining its project key (`docbridge_service-name`) and source patterns.
+
+### 15.4. Snyk Integration
+1. Register a free account at [app.snyk.io](https://app.snyk.io/).
+2. Copy your API token to the `SNYK_TOKEN` repository secret.
+3. Snyk vulnerability checks run during the `build` pipeline stage and export an HTML results report as a GitHub Actions run artifact (available for 30 days). Findings do not block the pipeline.
+
+### 15.5. Pipeline Flow & Triggers
+
+- **Terraform Infrastructure Pipeline** (`infra-terraform.yml`):
+  - Triggers automatically on push/PR modifying files under `terraform/`.
+  - Manual trigger via `workflow_dispatch` allows running a `plan`, `apply`, or `destroy` action.
+  - Applying or destroying infrastructure triggers the `production` environment review gate, requiring manual approval in the GitHub UI before proceeding.
+- **Application CI/CD Pipeline** (`cicd-application.yml`):
+  - Triggers automatically on push/PR modifying files under `services/`, `gateway/`, `frontend/`, `database/`, or `helm/`.
+  - Performs path filtering to run stages (SonarCloud quality gates, Snyk SCA, Docker pushes, Approval gates, and Helm deploys) for changed services only.
+  - Manual trigger via `workflow_dispatch` allows forcing deployment of a specific service or all services.
+
+### 15.6. Database Migrations Pipeline Hook
+When database schemas (`database/migrations/` or `database/seeders/`) are changed:
+1. The pipeline automatically builds and pushes a new `db-migrations:latest` image to ACR.
+2. This image is automatically pulled and run by the pre-upgrade Helm hook during any subsequent microservice deployment.
+3. No manual migration commands are required.
+
