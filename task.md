@@ -6,4 +6,4 @@
   - [x] Update terraform-destroy job dependencies and steps
   - [x] Exclude action=destroy from terraform-apply job
   - [x] Support -destroy flag in terraform-plan step
-- [/] Push changes and verify
+- [x] Push changes and verify

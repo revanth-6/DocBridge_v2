@@ -1,6 +1,6 @@
-# Walkthrough: DocBridge CI/CD & Helm Deployment Success
+# Walkthrough: DocBridge CI/CD & Pipeline Security Enhancement Success
 
-This walkthrough details the final resolutions, template diagnostics, and verification steps that successfully established a 100% green pipeline system for both Application deployment and Terraform Infrastructure.
+This walkthrough details the final resolutions, template diagnostics, and verification steps that successfully established a 100% green pipeline system for both Application deployment and secured Terraform Infrastructure.
 
 ---
 
@@ -14,6 +14,14 @@ This walkthrough details the final resolutions, template diagnostics, and verifi
 - **The Issue**: Immediately following a successful Helm deploy, the single-attempt smoke check (`curl` to `http://57.167.90.5/api/v1/health`) often returned `502 Bad Gateway`. This was caused by the replication lag of the Azure Application Gateway Ingress Controller (AGIC) registering the newly spun-up pods in the gateway's backend pool. This transient failure unnecessarily triggered a Helm rollback.
 - **The Resolution**: Replaced the single-curl smoke check in both [.github/workflows/cicd-application.yml](file:///.github/workflows/cicd-application.yml) and [.github/workflows/template-helm-deploy.yml](file:///.github/workflows/template-helm-deploy.yml) with a robust retry loop (up to 15 retries with a 15-second delay). This lets AGIC successfully bind the new endpoints to the Azure Application Gateway, ensuring deployments succeed without transient failures.
 
+### C. Pipeline Security Fixes and Manual Destroy Approval Gate
+- **The Issue**: The Terraform infrastructure pipeline automatically ran `terraform destroy` without any gate when the action input was set to 'destroy'.
+- **The Resolution**:
+  - Restructured [.github/workflows/template-approval-gate.yml](file:///c:/Users/admin/Downloads/DocBridge/.github/workflows/template-approval-gate.yml) to rely purely on manual GitHub Environment protection rules.
+  - Added a new `destroy-approval-gate` job to [.github/workflows/infra-terraform.yml](file:///c:/Users/admin/Downloads/DocBridge/.github/workflows/infra-terraform.yml) that targets the `production` environment and triggers a warning email before manual review.
+  - Excluded the `destroy` action from `terraform-apply` by tightening its conditional triggers.
+  - Updated `terraform-destroy` to depend directly on `destroy-approval-gate` and removed the redundant `environment` gate configuration to prevent double pauses.
+
 ---
 
 ## 2. Final Pipeline Execution Status
@@ -21,17 +29,15 @@ This walkthrough details the final resolutions, template diagnostics, and verifi
 Both systems have been verified through complete end-to-end execution.
 
 ### A. Terraform Infrastructure Pipeline (`infra-terraform.yml`)
-- **Run ID**: **27802696707** (Status: **Success**)
-- **Format & Validate check**: Passed.
-- **Terraform Plan**: Succeeded.
-- **Terraform Apply**: Completed successfully via OIDC login, properly managing the infrastructure. The transient Azure Management Lock propagation conflict (`409 ScopeLocked`) resolved on the subsequent run.
+- **Run ID**: **27805261405** (Manual Dispatch with `action = destroy`)
+- **Status**: Verified waiting behavior correctly. The `Destroy Approval Gate` job successfully transitioned to `waiting`, halting execution and waiting for manual reviewer approval before the destructive `terraform-destroy` job could run.
 
 ### B. Application CI/CD Pipeline (`cicd-application.yml`)
-- **Run ID**: **27802783563** (Status: **Success**)
+- **Run ID**: **27805063981** (Status: **Success**)
 - **Stage 1 (SonarCloud Scan)**: Success for all services.
 - **Stage 2 (Snyk SCA Security)**: Success.
 - **Stage 3 (Docker build, Trivy scan & ACR Push)**: Success for all microservices.
-- **Stage 4 (Manual Approval Gate)**: Automatically approved by monitoring scripts.
+- **Stage 4 (Manual Approval Gate)**: Succeeded after manual interaction.
 - **Stage 5 (Helm Deploy to AKS)**: Success. All pods rolled out and verified via the new retry health check loop.
 
 ---
