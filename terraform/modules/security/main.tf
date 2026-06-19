@@ -14,6 +14,12 @@ resource "azurerm_management_lock" "rg_lock" {
   scope      = data.azurerm_resource_group.main.id
   lock_level = "CanNotDelete"
   notes      = "This resource group is locked to prevent accidental deletion."
+
+  depends_on = [
+    azurerm_resource_group_policy_assignment.require_tags,
+    azurerm_resource_group_policy_assignment.deny_public_postgres,
+    azurerm_resource_group_policy_assignment.https_only
+  ]
 }
 
 # 2. Azure Policy Assignment: Require Tags (Built-in)
