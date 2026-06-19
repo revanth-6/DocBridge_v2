@@ -122,7 +122,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "pod_restarts" {
   query          = <<-QUERY
     KubePodInventory
     | where TimeGenerated > ago(15m)
-    | summarize Restarts = max(ContainerRestartCount) by Name
+    | summarize Restarts = max(ContainerRestartCount) - min(ContainerRestartCount) by Name, Namespace
     | where Restarts > 5
   QUERY
   severity       = 1
