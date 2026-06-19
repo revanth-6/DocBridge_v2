@@ -13,7 +13,6 @@ on:
       - 'frontend/**'
       - 'database/**'
       - 'helm/**'
-      - '.github/workflows/**'
   pull_request:
     branches: [main]
     paths:
@@ -22,7 +21,6 @@ on:
       - 'frontend/**'
       - 'database/**'
       - 'helm/**'
-      - '.github/workflows/**'
   workflow_dispatch:
     inputs:
       service_override:
