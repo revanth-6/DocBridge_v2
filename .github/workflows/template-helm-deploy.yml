@@ -119,14 +119,28 @@ jobs:
 
       - name: Run Smoke Test against Gateway
         run: |
-          AGW_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            --connect-timeout 15 \
-            http://${{ inputs.agw_ip }}/api/v1/health)
-          if [ "$AGW_RESPONSE" != "200" ]; then
-            echo "Health check failed: HTTP $AGW_RESPONSE"
+          MAX_RETRIES=15
+          RETRY_DELAY=15
+          success=false
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i of $MAX_RETRIES to check Application Gateway health..."
+            AGW_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              http://${{ inputs.agw_ip }}/api/v1/health)
+            if [ "$AGW_RESPONSE" = "200" ]; then
+              success=true
+              echo "Health check passed: HTTP $AGW_RESPONSE"
+              break
+            else
+              echo "Health check attempt $i returned HTTP $AGW_RESPONSE. Waiting $RETRY_DELAY seconds before retrying..."
+              sleep $RETRY_DELAY
+            fi
+          done
+          if [ "$success" = false ]; then
+            echo "Health check failed after $MAX_RETRIES attempts."
             exit 1
           fi
-          echo "Health check passed: HTTP $AGW_RESPONSE"
+
 
       - name: Handle Rollback on Failure
         if: failure()
