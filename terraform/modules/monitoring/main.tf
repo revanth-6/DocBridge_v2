@@ -110,6 +110,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "pod_restarts" {
   location            = var.location
   resource_group_name = local.resource_group_name
   tags                = var.tags
+  depends_on          = [azurerm_role_assignment.monitoring_contributor]
 
   action {
     action_group = [azurerm_monitor_action_group.email.id]
@@ -162,6 +163,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "app_errors" {
   location            = var.location
   resource_group_name = local.resource_group_name
   tags                = var.tags
+  depends_on          = [azurerm_role_assignment.monitoring_contributor]
 
   action {
     action_group = [azurerm_monitor_action_group.email.id]
@@ -192,6 +194,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "waf_blocked" {
   location            = var.location
   resource_group_name = local.resource_group_name
   tags                = var.tags
+  depends_on          = [azurerm_role_assignment.monitoring_contributor]
 
   action {
     action_group = [azurerm_monitor_action_group.email.id]
@@ -287,3 +290,11 @@ resource "azurerm_monitor_activity_log_alert" "service_health" {
 }
 
 data "azurerm_client_config" "current" {}
+
+# Role Assignment: Give the deploying service principal "Monitoring Contributor"
+# on the Log Analytics Workspace so it can create scheduled query alert rules.
+resource "azurerm_role_assignment" "monitoring_contributor" {
+  scope                = azurerm_log_analytics_workspace.main.id
+  role_definition_name = "Monitoring Contributor"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
