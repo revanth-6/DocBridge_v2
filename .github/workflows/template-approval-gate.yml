@@ -1,4 +1,4 @@
-name: Template Approval Gate
+name: Template - Approval Gate
 
 on:
   workflow_call:
@@ -14,24 +14,25 @@ on:
         type: string
     secrets:
       SMTP_USERNAME:
-        required: false
+        required: true
       SMTP_PASSWORD:
-        required: false
+        required: true
       ALERT_EMAIL:
-        required: false
+        required: true
     outputs:
       approved:
+        description: "Whether deployment was approved"
         value: ${{ jobs.approval.outputs.approved }}
 
 jobs:
   approval:
-    name: Approval Gate - ${{ inputs.environment }}
+    name: "Approval Gate - ${{ inputs.environment }}"
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     outputs:
       approved: ${{ steps.set-approved.outputs.approved }}
     steps:
-      - name: Send Approval Email
+      - name: Send Approval Request Email
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -39,33 +40,42 @@ jobs:
           secure: true
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          from: DocBridge DevOps <${{ secrets.SMTP_USERNAME }}>
+          subject: "APPROVAL REQUIRED - Deploy ${{ inputs.service_name }} to ${{ inputs.environment }}"
           to: ${{ secrets.ALERT_EMAIL }}
-          subject: APPROVAL REQUIRED - Deploy ${{ inputs.service_name }} to ${{ inputs.environment }} - DocBridge
+          from: DocBridge DevOps <${{ secrets.SMTP_USERNAME }}>
           body: |
-            Deployment Approval is requested for service: ${{ inputs.service_name }}
+            DEPLOYMENT APPROVAL REQUIRED
+            ════════════════════════════════════════
 
-            Service: ${{ inputs.service_name }}
-            Image Tag: ${{ inputs.image_tag }}
-            Environment: ${{ inputs.environment }}
-            Branch: ${{ github.ref_name }}
+            Service:      ${{ inputs.service_name }}
+            Image Tag:    ${{ inputs.image_tag }}
+            Environment:  ${{ inputs.environment }}
+            Branch:       ${{ github.ref_name }}
             Triggered by: ${{ github.actor }}
-            Commit: ${{ github.sha }}
-            
-            Approve and Deploy Here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            
-            Instructions:
-            1. Click the link above to view the workflow run.
-            2. Review the pending deployment environment.
-            3. Select the environment and click "Review deployments".
-            4. Choose "Approve and deploy" to proceed, or "Reject" to cancel the deployment.
+            Commit:       ${{ github.sha }}
 
-      - name: Log Pending Review status
+            ════════════════════════════════════════
+            APPROVE OR REJECT HERE:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            ════════════════════════════════════════
+
+            Steps to approve:
+            1. Click the link above
+            2. Find the waiting Approval Gate job
+            3. Click Review deployments
+            4. Select ${{ inputs.environment }}
+            5. Click Approve and deploy
+
+            -- DocBridge DevOps Pipeline
+
+      - name: Waiting for Manual Approval
         run: |
-          echo "Waiting for manual approval gate confirmation in GitHub UI..."
-          echo "Please navigate to the Actions run page to approve the deployment."
+          echo "Pipeline is paused waiting for manual approval."
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Service:     ${{ inputs.service_name }}"
+          echo "Image Tag:   ${{ inputs.image_tag }}"
+          echo "Go to GitHub Actions and approve this deployment."
 
       - name: Set Approved Output
         id: set-approved
-        run: |
-          echo "approved=true" >> $GITHUB_OUTPUT
+        run: echo "approved=true" >> $GITHUB_OUTPUT

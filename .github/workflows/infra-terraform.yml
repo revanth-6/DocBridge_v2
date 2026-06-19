@@ -129,27 +129,30 @@ jobs:
             -backend-config="key=dev.terraform.tfstate"
 
       - name: Terraform Plan
-        id: plan
         working-directory: ${{ env.WORKING_DIR }}
+        id: plan
         run: |
-          # Capture plan exit code without failing the workflow block
-          set +e
-          terraform plan \
-            -var="owner=DocBridgeTeam" \
-            -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
-            -var="db_password=${{ secrets.DB_PASSWORD }}" \
-            -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
-            -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
-            -var="azure_openai_key=${{ secrets.AZURE_OPENAI_KEY }}" \
-            -out=tfplan \
-            -detailed-exitcode \
-            2>&1 | tee plan-output.txt
-          exit_code=${PIPESTATUS[0]}
-          set -e
-          echo "exit_code=$exit_code" >> $GITHUB_ENV
-          if [ $exit_code -eq 1 ]; then
-            echo "Terraform plan failed!"
-            exit 1
+          if [ "${{ github.event.inputs.action }}" = "destroy" ]; then
+            terraform plan \
+              -destroy \
+              -var="owner=DocBridgeTeam" \
+              -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
+              -var="db_password=${{ secrets.DB_PASSWORD }}" \
+              -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
+              -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
+              -var="azure_openai_key=${{ secrets.AZURE_OPENAI_KEY }}" \
+              -out=tfplan \
+              2>&1 | tee plan-output.txt
+          else
+            terraform plan \
+              -var="owner=DocBridgeTeam" \
+              -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
+              -var="db_password=${{ secrets.DB_PASSWORD }}" \
+              -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
+              -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
+              -var="azure_openai_key=${{ secrets.AZURE_OPENAI_KEY }}" \
+              -out=tfplan \
+              2>&1 | tee plan-output.txt
           fi
 
       - name: Upload Plan Artifact
@@ -221,13 +224,15 @@ jobs:
             Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   terraform-apply:
-    name: Terraform Apply
+    name: "Terraform Apply"
     runs-on: ubuntu-latest
     needs: terraform-plan
     environment: production
     if: >
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+      (github.event_name == 'push' &&
+       github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.event.inputs.action == 'apply')
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -321,10 +326,37 @@ jobs:
             
             Action Required: Check apply logs for transient cloud API timeouts or access conflicts.
 
+  destroy-approval-gate:
+    name: "Destroy Approval Gate"
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    environment: production
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.action == 'destroy'
+    steps:
+      - name: Send Destroy Warning Email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          from: DocBridge DevOps <${{ secrets.SMTP_USERNAME }}>
+          to: ${{ secrets.ALERT_EMAIL }}
+          subject: "WARNING: Infrastructure Destruction Pending Approval - DocBridge"
+          body: |
+            A request has been made to destroy all DocBridge infrastructure. This will permanently delete all cloud resources. Please review and approve this action in GitHub.
+
+      - name: Waiting for Manual Approval
+        run: |
+          echo "Pipeline is paused waiting for manual approval for infrastructure destruction."
+
   terraform-destroy:
     name: Terraform Destroy
     runs-on: ubuntu-latest
-    environment: production
+    needs: destroy-approval-gate
     if: >
       github.event_name == 'workflow_dispatch' &&
       github.event.inputs.action == 'destroy'
